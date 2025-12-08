@@ -1,7 +1,11 @@
 """FastAPI application entry point."""
+from dotenv import load_dotenv
 from fastapi import FastAPI
 
-from app.routes import user
+# Load environment variables from .env file
+load_dotenv()
+
+from app.routes import user, proposal
 
 app = FastAPI(
     title="Freelance Proposal Optimizer API",
@@ -11,6 +15,7 @@ app = FastAPI(
 
 # Include routers
 app.include_router(user.router)
+app.include_router(proposal.router)
 
 
 @app.get("/")

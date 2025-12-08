@@ -70,6 +70,33 @@ class FirestoreClient:
         if doc.exists:
             return doc.to_dict()
         return None
+    
+    def save_proposal(
+        self, 
+        user_id: str, 
+        proposal_data: Dict[str, Any]
+    ) -> str:
+        """
+        Save proposal data to Firestore.
+        
+        Args:
+            user_id: User ID associated with the proposal
+            proposal_data: Dictionary containing proposal information
+            
+        Returns:
+            Document ID of the saved proposal
+        """
+        from datetime import datetime
+        
+        # Add metadata
+        proposal_data["user_id"] = user_id
+        proposal_data["created_at"] = datetime.utcnow().isoformat()
+        
+        # Create a new document in proposals collection
+        doc_ref = self.db.collection("proposals").document()
+        doc_ref.set(proposal_data)
+        
+        return doc_ref.id
 
 
 # Global instance
