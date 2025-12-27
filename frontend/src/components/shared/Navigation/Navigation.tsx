@@ -29,7 +29,7 @@ export default function Navigation() {
         <ul className={styles.navLinks}>
           <li>
             <Link href="/" className={pathname === '/' ? styles.active : ''}>
-              Home
+              Dashboard
             </Link>
           </li>
           {currentUser ? (

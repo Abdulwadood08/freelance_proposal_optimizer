@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Navigation from "@/components/shared/Navigation/Navigation";
 import { AuthProvider } from "@/contexts/AuthContext";
+import AuthenticatedLayout from "@/components/shared/AuthenticatedLayout/AuthenticatedLayout";
 
 export const metadata: Metadata = {
   title: "Freelance Proposal Optimizer",
@@ -17,8 +17,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AuthProvider>
-          <Navigation />
-          <main>{children}</main>
+          <AuthenticatedLayout>{children}</AuthenticatedLayout>
         </AuthProvider>
       </body>
     </html>

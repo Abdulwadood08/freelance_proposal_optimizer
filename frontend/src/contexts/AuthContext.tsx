@@ -8,6 +8,8 @@ import {
   signOut,
   onAuthStateChanged,
   sendPasswordResetEmail,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
@@ -15,9 +17,11 @@ interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
   signup: (email: string, password: string) => Promise<void>;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
+  loginWithGoogle: (rememberMe?: boolean) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  isRemembered: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,9 +38,21 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+const REMEMBER_ME_KEY = 'rememberMe';
+const REMEMBERED_EMAIL_KEY = 'rememberedEmail';
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRemembered, setIsRemembered] = useState(false);
+
+  // Check if user should be remembered on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const remembered = localStorage.getItem(REMEMBER_ME_KEY) === 'true';
+      setIsRemembered(remembered);
+    }
+  }, []);
 
   function signup(email: string, password: string) {
     return createUserWithEmailAndPassword(auth, email, password).then(() => {
@@ -44,11 +60,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
     });
   }
 
-  function login(email: string, password: string) {
+  function login(email: string, password: string, rememberMe: boolean = false) {
+    if (rememberMe && typeof window !== 'undefined') {
+      localStorage.setItem(REMEMBER_ME_KEY, 'true');
+      localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
+    } else if (typeof window !== 'undefined') {
+      localStorage.removeItem(REMEMBER_ME_KEY);
+      localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+    }
+    setIsRemembered(rememberMe);
     return signInWithEmailAndPassword(auth, email, password);
   }
 
+  function loginWithGoogle(rememberMe: boolean = false) {
+    const provider = new GoogleAuthProvider();
+    if (rememberMe && typeof window !== 'undefined') {
+      localStorage.setItem(REMEMBER_ME_KEY, 'true');
+    } else if (typeof window !== 'undefined') {
+      localStorage.removeItem(REMEMBER_ME_KEY);
+    }
+    setIsRemembered(rememberMe);
+    return signInWithPopup(auth, provider);
+  }
+
   function logout() {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(REMEMBER_ME_KEY);
+      localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+    }
+    setIsRemembered(false);
     return signOut(auth);
   }
 
@@ -70,8 +110,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     loading,
     signup,
     login,
+    loginWithGoogle,
     logout,
     resetPassword,
+    isRemembered,
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;

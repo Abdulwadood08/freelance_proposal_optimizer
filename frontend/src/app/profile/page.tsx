@@ -1,10 +1,10 @@
 import Profile from '@/components/Profile/Profile';
-import ProtectedRoute from '@/components/auth/ProtectedRoute/ProtectedRoute';
+import AuthRedirect from '@/components/shared/AuthRedirect/AuthRedirect';
 
 export default function ProfilePage() {
   return (
-    <ProtectedRoute>
+    <AuthRedirect>
       <Profile />
-    </ProtectedRoute>
+    </AuthRedirect>
   );
 }

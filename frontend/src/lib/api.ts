@@ -28,7 +28,6 @@ export interface User {
   skills: string[];
   resume_url: string;
   case_studies: string[];
-  fiverr_gigs: string[];
   upwork_profile: string;
 }
 
@@ -39,7 +38,6 @@ export interface CreateUserRequest {
   skills: string[];
   resume_url: string;
   case_studies: string[];
-  fiverr_gigs: string[];
   upwork_profile: string;
 }
 
@@ -107,6 +105,58 @@ export async function generateProposal(
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.detail || 'Failed to generate proposal');
+  }
+
+  return response.json();
+}
+
+export interface Proposal {
+  id: string;
+  user_id: string;
+  proposal: string;
+  cover_letter: string;
+  tone_variations: {
+    professional: string;
+    friendly: string;
+    confident: string;
+  };
+  job_post: string;
+  created_at: string;
+}
+
+export interface ProposalsResponse {
+  proposals: Proposal[];
+  count: number;
+}
+
+export async function getUserProposals(
+  userId: string,
+  firebaseUser: FirebaseUser | null,
+  limit: number = 10
+): Promise<ProposalsResponse> {
+  const response = await fetch(`${API_BASE_URL}/v1/proposals/user/${userId}?limit=${limit}`, {
+    headers: await getAuthHeaders(firebaseUser),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to fetch proposals');
+  }
+
+  return response.json();
+}
+
+export async function getProposalCount(
+  userId: string,
+  firebaseUser: FirebaseUser | null
+): Promise<{ count: number }> {
+  const response = await fetch(`${API_BASE_URL}/v1/proposals/user/${userId}/count`, {
+    headers: await getAuthHeaders(firebaseUser),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to get proposal count');
   }
 
   return response.json();

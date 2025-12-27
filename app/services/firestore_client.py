@@ -97,6 +97,44 @@ class FirestoreClient:
         doc_ref.set(proposal_data)
         
         return doc_ref.id
+    
+    def get_user_proposals(self, user_id: str, limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        Get proposals for a specific user, ordered by creation date.
+        
+        Args:
+            user_id: User ID to get proposals for
+            limit: Maximum number of proposals to return
+            
+        Returns:
+            List of proposal dictionaries
+        """
+        from google.cloud.firestore import Query
+        
+        proposals_ref = self.db.collection("proposals")
+        query = proposals_ref.where("user_id", "==", user_id).order_by("created_at", direction=Query.DESCENDING).limit(limit)
+        
+        proposals = []
+        for doc in query.stream():
+            proposal_data = doc.to_dict()
+            proposal_data["id"] = doc.id
+            proposals.append(proposal_data)
+        
+        return proposals
+    
+    def get_proposal_count(self, user_id: str) -> int:
+        """
+        Get total count of proposals for a user.
+        
+        Args:
+            user_id: User ID to count proposals for
+            
+        Returns:
+            Total number of proposals
+        """
+        proposals_ref = self.db.collection("proposals")
+        query = proposals_ref.where("user_id", "==", user_id)
+        return len(list(query.stream()))
 
 
 # Global instance

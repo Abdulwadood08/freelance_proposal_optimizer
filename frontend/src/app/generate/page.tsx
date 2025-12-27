@@ -1,10 +1,10 @@
 import GenerateProposal from '@/components/GenerateProposal/GenerateProposal';
-import ProtectedRoute from '@/components/auth/ProtectedRoute/ProtectedRoute';
+import AuthRedirect from '@/components/shared/AuthRedirect/AuthRedirect';
 
 export default function GeneratePage() {
   return (
-    <ProtectedRoute>
+    <AuthRedirect>
       <GenerateProposal />
-    </ProtectedRoute>
+    </AuthRedirect>
   );
 }

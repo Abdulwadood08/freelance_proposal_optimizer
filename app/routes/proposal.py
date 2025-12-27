@@ -1,7 +1,7 @@
 """Proposal-related API endpoints."""
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Query
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 from app.services.firestore_client import get_firestore_client
 from app.services.openai_client import get_openai_client
@@ -101,5 +101,53 @@ async def generate_proposal(request: ProposalGenerateRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate proposal: {str(e)}"
+        )
+
+
+@router.get("/v1/proposals/user/{user_id}")
+async def get_user_proposals(
+    user_id: str,
+    limit: int = Query(default=10, ge=1, le=50)
+):
+    """
+    Get proposals for a specific user.
+    
+    Args:
+        user_id: The ID of the user
+        limit: Maximum number of proposals to return (1-50)
+        
+    Returns:
+        List of proposals
+    """
+    try:
+        firestore_client = get_firestore_client()
+        proposals = firestore_client.get_user_proposals(user_id, limit)
+        return {"proposals": proposals, "count": len(proposals)}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve proposals: {str(e)}"
+        )
+
+
+@router.get("/v1/proposals/user/{user_id}/count")
+async def get_proposal_count(user_id: str):
+    """
+    Get total count of proposals for a user.
+    
+    Args:
+        user_id: The ID of the user
+        
+    Returns:
+        Total count of proposals
+    """
+    try:
+        firestore_client = get_firestore_client()
+        count = firestore_client.get_proposal_count(user_id)
+        return {"count": count}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get proposal count: {str(e)}"
         )
 
