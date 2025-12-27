@@ -1,0 +1,14 @@
+/* Generate Proposal Page Styles */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 20px;
+  min-height: calc(100vh - 80px);
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem 15px;
+  }
+}
+

@@ -1,14 +1,16 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { createUser, getUser, type User } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import styles from './ProfileForm.module.css';
 import Card from '@/components/shared/Card/Card';
 import Button from '@/components/shared/Button/Button';
 
 export default function ProfileForm() {
   const router = useRouter();
+  const { currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [formData, setFormData] = useState({
@@ -24,6 +26,44 @@ export default function ProfileForm() {
   const [skillInput, setSkillInput] = useState('');
   const [caseStudyInput, setCaseStudyInput] = useState('');
   const [fiverrGigInput, setFiverrGigInput] = useState('');
+
+  // Initialize form with user data and auto-load profile
+  useEffect(() => {
+    if (currentUser) {
+      setFormData(prev => ({
+        ...prev,
+        user_id: currentUser.uid,
+        email: currentUser.email || '',
+      }));
+      
+      // Auto-load user profile if it exists
+      loadUserProfile();
+    }
+  }, [currentUser]);
+
+  const loadUserProfile = async () => {
+    if (!currentUser) return;
+    
+    setLoading(true);
+    try {
+      const user = await getUser(currentUser.uid, currentUser);
+      setFormData({
+        user_id: user.user_id,
+        name: user.name,
+        email: user.email,
+        skills: user.skills,
+        resume_url: user.resume_url,
+        case_studies: user.case_studies,
+        fiverr_gigs: user.fiverr_gigs,
+        upwork_profile: user.upwork_profile,
+      });
+    } catch (error: any) {
+      // User doesn't exist yet, that's okay - they'll create it
+      console.log('Profile not found, will create new one');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const addSkill = () => {
     if (skillInput.trim() && !formData.skills.includes(skillInput.trim())) {
@@ -58,41 +98,15 @@ export default function ProfileForm() {
     setFormData({ ...formData, fiverr_gigs: formData.fiverr_gigs.filter(g => g !== gig) });
   };
 
-  const handleLoadUser = async () => {
-    if (!formData.user_id) {
-      setMessage({ type: 'error', text: 'Please enter a User ID' });
-      return;
-    }
-
-    setLoading(true);
-    setMessage(null);
-    try {
-      const user = await getUser(formData.user_id);
-      setFormData({
-        user_id: user.user_id,
-        name: user.name,
-        email: user.email,
-        skills: user.skills,
-        resume_url: user.resume_url,
-        case_studies: user.case_studies,
-        fiverr_gigs: user.fiverr_gigs,
-        upwork_profile: user.upwork_profile,
-      });
-      setMessage({ type: 'success', text: 'Profile loaded successfully!' });
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Failed to load user' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!currentUser) return;
+    
     setLoading(true);
     setMessage(null);
 
     try {
-      await createUser(formData);
+      await createUser(formData, currentUser);
       setMessage({ type: 'success', text: 'Profile saved successfully!' });
       setTimeout(() => {
         router.push('/generate');
@@ -119,23 +133,6 @@ export default function ProfileForm() {
 
       <form onSubmit={handleSubmit}>
         <div className={styles.formGroup}>
-          <label className={styles.formLabel}>User ID *</label>
-          <div className={styles.inputGroup}>
-            <input
-              type="text"
-              className={styles.formInput}
-              value={formData.user_id}
-              onChange={(e) => setFormData({ ...formData, user_id: e.target.value })}
-              required
-              placeholder="e.g., john_doe_123"
-            />
-            <Button type="button" variant="secondary" onClick={handleLoadUser} disabled={loading}>
-              Load
-            </Button>
-          </div>
-        </div>
-
-        <div className={styles.formGroup}>
           <label className={styles.formLabel}>Name *</label>
           <input
             type="text"
@@ -143,6 +140,7 @@ export default function ProfileForm() {
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             required
+            placeholder="Your full name"
           />
         </div>
 
@@ -152,9 +150,12 @@ export default function ProfileForm() {
             type="email"
             className={styles.formInput}
             value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            required
+            disabled
+            style={{ backgroundColor: 'var(--bg-secondary)', cursor: 'not-allowed' }}
           />
+          <small style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+            Email is managed by your account
+          </small>
         </div>
 
         <div className={styles.formGroup}>

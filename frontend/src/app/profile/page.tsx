@@ -1,12 +1,10 @@
-'use client';
-
-import styles from './profile.module.css';
-import ProfileForm from '@/components/profile/ProfileForm/ProfileForm';
+import Profile from '@/components/Profile/Profile';
+import ProtectedRoute from '@/components/auth/ProtectedRoute/ProtectedRoute';
 
 export default function ProfilePage() {
   return (
-    <div className={styles.container}>
-      <ProfileForm />
-    </div>
+    <ProtectedRoute>
+      <Profile />
+    </ProtectedRoute>
   );
 }

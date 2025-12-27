@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { generateProposal, type ProposalResponse } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 import styles from './ProposalForm.module.css';
 import Card from '@/components/shared/Card/Card';
 import Button from '@/components/shared/Button/Button';
@@ -11,20 +12,29 @@ interface ProposalFormProps {
 }
 
 export default function ProposalForm({ onProposalGenerated }: ProposalFormProps) {
+  const { currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [formData, setFormData] = useState({
-    user_id: '',
-    job_post: '',
-  });
+  const [jobPost, setJobPost] = useState('');
+
+  useEffect(() => {
+    if (!currentUser) {
+      setMessage({ type: 'error', text: 'You must be logged in to generate proposals' });
+    }
+  }, [currentUser]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!currentUser) return;
+    
     setLoading(true);
     setMessage(null);
 
     try {
-      const result = await generateProposal(formData);
+      const result = await generateProposal(
+        { user_id: currentUser.uid, job_post: jobPost },
+        currentUser
+      );
       onProposalGenerated(result);
       setMessage({ type: 'success', text: 'Proposal generated successfully!' });
     } catch (error: any) {
@@ -38,7 +48,7 @@ export default function ProposalForm({ onProposalGenerated }: ProposalFormProps)
     <Card>
       <h1 className="card-title">Generate Proposal</h1>
       <p className={styles.description}>
-        Enter your user ID and paste the job post to generate a tailored proposal.
+        Paste the job post to generate a tailored proposal based on your profile.
       </p>
 
       {message && (
@@ -49,25 +59,14 @@ export default function ProposalForm({ onProposalGenerated }: ProposalFormProps)
 
       <form onSubmit={handleSubmit}>
         <div className={styles.formGroup}>
-          <label className={styles.formLabel}>User ID *</label>
-          <input
-            type="text"
-            className={styles.formInput}
-            value={formData.user_id}
-            onChange={(e) => setFormData({ ...formData, user_id: e.target.value })}
-            required
-            placeholder="e.g., john_doe_123"
-          />
-        </div>
-
-        <div className={styles.formGroup}>
           <label className={styles.formLabel}>Job Post *</label>
           <textarea
             className={styles.formTextarea}
-            value={formData.job_post}
-            onChange={(e) => setFormData({ ...formData, job_post: e.target.value })}
+            value={jobPost}
+            onChange={(e) => setJobPost(e.target.value)}
             required
             placeholder="Paste the job description from Upwork here..."
+            disabled={!currentUser}
           />
         </div>
 
