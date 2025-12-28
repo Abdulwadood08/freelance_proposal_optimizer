@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUser, getUserProposals, getProposalCount, type User, type Proposal } from '@/lib/api';
+import { getUser, getUserProposals, getProposalCount, updateProposalStatus, getProposalAnalytics, type User, type Proposal, type ProposalAnalytics } from '@/lib/api';
 import styles from './Dashboard.module.css';
 import Card from '@/components/shared/Card/Card';
 import Button from '@/components/shared/Button/Button';
@@ -17,6 +17,8 @@ export default function Dashboard() {
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [proposalCount, setProposalCount] = useState(0);
   const [profileCompletion, setProfileCompletion] = useState(0);
+  const [analytics, setAnalytics] = useState<ProposalAnalytics | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (currentUser) {
@@ -56,6 +58,14 @@ export default function Dashboard() {
         setProposalCount(countData.count);
       } catch {
         // Error loading count
+      }
+
+      // Load analytics
+      try {
+        const analyticsData = await getProposalAnalytics(currentUser.uid, currentUser);
+        setAnalytics(analyticsData);
+      } catch {
+        // Error loading analytics
       }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -102,6 +112,50 @@ export default function Dashboard() {
   const getLastGenerated = () => {
     if (proposals.length === 0) return 'Never';
     return formatDate(proposals[0].created_at);
+  };
+
+  const handleStatusUpdate = async (proposalId: string, status: 'sent' | 'won' | 'lost') => {
+    if (!currentUser) return;
+    
+    setUpdatingStatus(proposalId);
+    try {
+      await updateProposalStatus(proposalId, currentUser.uid, status, currentUser);
+      
+      // Update local state
+      setProposals(proposals.map(p => 
+        p.id === proposalId ? { ...p, status } : p
+      ));
+      
+      // Reload analytics
+      const analyticsData = await getProposalAnalytics(currentUser.uid, currentUser);
+      setAnalytics(analyticsData);
+    } catch (error: any) {
+      alert(`Failed to update status: ${error.message}`);
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+
+  const getStatusBadge = (status?: string) => {
+    if (!status || status === 'draft') return null;
+    
+    const statusConfig = {
+      sent: { label: 'Sent', color: 'var(--primary-color)', bg: 'rgba(37, 99, 235, 0.1)' },
+      won: { label: 'Won', color: 'var(--success-color)', bg: 'rgba(16, 185, 129, 0.1)' },
+      lost: { label: 'Lost', color: 'var(--error-color)', bg: 'rgba(239, 68, 68, 0.1)' },
+    };
+    
+    const config = statusConfig[status as keyof typeof statusConfig];
+    if (!config) return null;
+    
+    return (
+      <span 
+        className={styles.statusBadge}
+        style={{ color: config.color, backgroundColor: config.bg }}
+      >
+        {config.label}
+      </span>
+    );
   };
 
   if (loading) {
@@ -208,9 +262,12 @@ export default function Dashboard() {
               {proposals.map((proposal) => (
                 <div key={proposal.id} className={styles.proposalItem}>
                   <div className={styles.proposalContent}>
-                    <h3 className={styles.proposalTitle}>
-                      {proposal.job_post.substring(0, 60)}...
-                    </h3>
+                    <div className={styles.proposalHeader}>
+                      <h3 className={styles.proposalTitle}>
+                        {proposal.job_post.substring(0, 60)}...
+                      </h3>
+                      {getStatusBadge(proposal.status)}
+                    </div>
                     <p className={styles.proposalDate}>
                       Generated {formatDate(proposal.created_at)}
                     </p>
@@ -226,6 +283,38 @@ export default function Dashboard() {
                     >
                       Copy
                     </Button>
+                    {proposal.status !== 'sent' && proposal.status !== 'won' && proposal.status !== 'lost' && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => handleStatusUpdate(proposal.id, 'sent')}
+                        className={styles.statusButton}
+                        disabled={updatingStatus === proposal.id}
+                      >
+                        ✓ Mark as Sent
+                      </Button>
+                    )}
+                    {proposal.status === 'sent' && (
+                      <>
+                        <Button
+                          variant="secondary"
+                          onClick={() => handleStatusUpdate(proposal.id, 'won')}
+                          className={styles.statusButton}
+                          disabled={updatingStatus === proposal.id}
+                          style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--success-color)' }}
+                        >
+                          🎉 Won
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          onClick={() => handleStatusUpdate(proposal.id, 'lost')}
+                          className={styles.statusButton}
+                          disabled={updatingStatus === proposal.id}
+                          style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--error-color)' }}
+                        >
+                          ✗ Lost
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
@@ -297,6 +386,59 @@ export default function Dashboard() {
             </div>
           )}
         </Card>
+
+        {/* Analytics Dashboard */}
+        {analytics && analytics.total_proposals > 0 && (
+          <Card className={styles.analyticsCard}>
+            <div className={styles.cardHeader}>
+              <h2 className={styles.cardTitle}>Proposal Analytics</h2>
+            </div>
+            <div className={styles.analyticsGrid}>
+              <div className={styles.analyticsItem}>
+                <div className={styles.analyticsLabel}>Win Rate</div>
+                <div className={styles.analyticsValue} style={{ color: 'var(--success-color)' }}>
+                  {analytics.win_rate}%
+                </div>
+                <div className={styles.analyticsSubtext}>
+                  {analytics.won_count} won / {analytics.sent_count} sent
+                </div>
+              </div>
+              <div className={styles.analyticsItem}>
+                <div className={styles.analyticsLabel}>Response Rate</div>
+                <div className={styles.analyticsValue} style={{ color: 'var(--primary-color)' }}>
+                  {analytics.response_rate}%
+                </div>
+                <div className={styles.analyticsSubtext}>
+                  {analytics.won_count + analytics.lost_count} responses
+                </div>
+              </div>
+              <div className={styles.analyticsItem}>
+                <div className={styles.analyticsLabel}>Total Proposals</div>
+                <div className={styles.analyticsValue}>{analytics.total_proposals}</div>
+                <div className={styles.analyticsSubtext}>
+                  {analytics.status_counts.draft} draft, {analytics.status_counts.sent} sent
+                </div>
+              </div>
+              <div className={styles.analyticsItem}>
+                <div className={styles.analyticsLabel}>Status Breakdown</div>
+                <div className={styles.statusBreakdown}>
+                  <span className={styles.statusItem}>
+                    <span className={styles.statusDot} style={{ backgroundColor: 'var(--primary-color)' }}></span>
+                    Sent: {analytics.status_counts.sent}
+                  </span>
+                  <span className={styles.statusItem}>
+                    <span className={styles.statusDot} style={{ backgroundColor: 'var(--success-color)' }}></span>
+                    Won: {analytics.status_counts.won}
+                  </span>
+                  <span className={styles.statusItem}>
+                    <span className={styles.statusDot} style={{ backgroundColor: 'var(--error-color)' }}></span>
+                    Lost: {analytics.status_counts.lost}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Quick Actions */}
         <Card className={styles.actionsCard}>

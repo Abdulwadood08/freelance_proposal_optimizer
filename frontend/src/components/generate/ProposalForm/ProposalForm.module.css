@@ -81,3 +81,173 @@
   100% { transform: rotate(360deg); }
 }
 
+.advancedSection {
+  margin-bottom: 1.5rem;
+}
+
+.advancedToggle {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: color 0.2s;
+}
+
+.advancedToggle:hover {
+  color: var(--primary-color);
+  opacity: 0.8;
+}
+
+.advancedOptions {
+  margin-top: 1rem;
+  padding: 1.5rem;
+  background-color: rgba(37, 99, 235, 0.05);
+  border: 1px solid rgba(37, 99, 235, 0.1);
+  border-radius: 0.5rem;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.formSelect {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-family: inherit;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.formSelect:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.formSelect:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.analyzeButtonContainer {
+  margin-top: 0.75rem;
+}
+
+.suggestionsPanel {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  background-color: rgba(37, 99, 235, 0.05);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: 0.5rem;
+  animation: slideDown 0.3s ease-out;
+}
+
+.suggestionsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.suggestionsHeader h3 {
+  margin: 0;
+  color: var(--text-color);
+  font-size: 1.25rem;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.closeButton:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.suggestionSection {
+  margin-bottom: 1.5rem;
+}
+
+.suggestionSection:last-child {
+  margin-bottom: 0;
+}
+
+.suggestionSection h4 {
+  margin: 0 0 0.75rem 0;
+  color: var(--text-color);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.suggestionSection p {
+  margin: 0.5rem 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.suggestionSection ul {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+  color: var(--text-secondary);
+}
+
+.suggestionSection li {
+  margin: 0.5rem 0;
+  line-height: 1.6;
+}
+
+.skillTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.skillTag {
+  padding: 0.5rem 1rem;
+  background-color: rgba(16, 185, 129, 0.1);
+  color: var(--success-color);
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.missingSkillTag {
+  padding: 0.5rem 1rem;
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--error-color);
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
