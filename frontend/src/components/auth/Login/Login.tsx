@@ -22,6 +22,7 @@ export default function Login() {
 
     try {
       await login(email, password, rememberMe);
+      // Dashboard will check if profile exists and redirect to onboarding if needed
       router.push('/');
     } catch (err: any) {
       setError(err.message || 'Failed to log in');
@@ -36,6 +37,7 @@ export default function Login() {
 
     try {
       await loginWithGoogle(rememberMe);
+      // Dashboard will check if profile exists and redirect to onboarding if needed
       router.push('/');
     } catch (err: any) {
       setError(err.message || 'Failed to sign in with Google');
