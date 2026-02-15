@@ -1,0 +1,10 @@
+{
+  "name": "freelance-proposal-optimizer",
+  "private": true,
+  "description": "Monorepo root – run backend and frontend from their directories.",
+  "scripts": {
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:frontend": "cd frontend && npm run build",
+    "install:frontend": "cd frontend && npm install"
+  }
+}

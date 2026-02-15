@@ -3,7 +3,7 @@ import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
 // Firebase configuration
-// These values should be set in your .env.local file
+// Loaded from .env or .env.local in the frontend directory
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
@@ -17,7 +17,7 @@ const firebaseConfig = {
 if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
   console.error(
     '⚠️ Firebase configuration is missing!\n' +
-    'Please create a .env.local file in the frontend directory with your Firebase config.\n' +
+    'Please add Firebase config to .env or .env.local in the frontend directory.\n' +
     'See AUTH_SETUP.md for instructions.'
   );
 }
