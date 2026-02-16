@@ -95,18 +95,20 @@ async def get_user(user_id: str):
     except HTTPException:
         raise
     except ValueError as e:
+        # e.g. GOOGLE_APPLICATION_CREDENTIALS not set or invalid service account
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Backend Firebase not configured: {str(e)}",
         )
     except FileNotFoundError as e:
+        # Firebase service account JSON file missing at path in .env
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Firebase service account file not found. Set GOOGLE_APPLICATION_CREDENTIALS in app/.env to the path of your JSON file. {str(e)}",
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve user: {str(e)}"
+            detail=f"Failed to retrieve user: {str(e)}",
         )
 

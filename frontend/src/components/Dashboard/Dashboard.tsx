@@ -2,73 +2,103 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUser, getUserProposals, getProposalCount, updateProposalStatus, getProposalAnalytics, type User, type Proposal, type ProposalAnalytics } from '@/lib/api';
+import { getUser, getUserProposals, getProposalCount, getProposalAnalytics, type User, type ProposalAnalytics } from '@/lib/api';
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+} from 'recharts';
 import styles from './Dashboard.module.css';
-import Card from '@/components/shared/Card/Card';
-import Button from '@/components/shared/Button/Button';
+
+const DocIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={styles.kpiIcon}>
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="16" y1="13" x2="8" y2="13" />
+    <line x1="16" y1="17" x2="8" y2="17" />
+    <line x1="10" y1="9" x2="8" y2="9" />
+  </svg>
+);
+
+const ChartIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={styles.kpiIcon}>
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+  </svg>
+);
+
+const TargetIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={styles.kpiIcon}>
+    <circle cx="12" cy="12" r="10" />
+    <circle cx="12" cy="12" r="6" />
+    <circle cx="12" cy="12" r="2" />
+  </svg>
+);
+
+const LightningIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={styles.kpiIcon}>
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+  </svg>
+);
+
+const activityData = [
+  { month: 'Jan', value: 12, value2: 8 },
+  { month: 'Feb', value: 15, value2: 10 },
+  { month: 'Mar', value: 18, value2: 14 },
+  { month: 'Apr', value: 22, value2: 18 },
+  { month: 'May', value: 28, value2: 24 },
+  { month: 'Jun', value: 36, value2: 30 },
+];
+
+const categoryData = [
+  { name: 'Web Dev', value: 85 },
+  { name: 'Mobile', value: 70 },
+  { name: 'UI/UX', value: 90 },
+  { name: 'Backend', value: 78 },
+  { name: 'DevOps', value: 65 },
+];
 
 export default function Dashboard() {
   const { currentUser } = useAuth();
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
-  const [proposals, setProposals] = useState<Proposal[]>([]);
   const [proposalCount, setProposalCount] = useState(0);
   const [profileCompletion, setProfileCompletion] = useState(0);
   const [analytics, setAnalytics] = useState<ProposalAnalytics | null>(null);
-  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    if (currentUser) {
-      loadDashboardData();
-    }
+    if (currentUser) loadDashboardData();
   }, [currentUser]);
 
   const loadDashboardData = async () => {
     if (!currentUser) return;
-    
     setLoading(true);
     try {
-      // Load user profile
       try {
         const userData = await getUser(currentUser.uid, currentUser);
         setUser(userData);
         calculateProfileCompletion(userData);
       } catch {
-        // User doesn't have a profile yet
         setUser(null);
       }
-
-      // Load proposals
       try {
-        const proposalsData = await getUserProposals(currentUser.uid, currentUser, 5);
-        setProposals(proposalsData.proposals);
-        setProposalCount(proposalsData.count);
+        const { count } = await getProposalCount(currentUser.uid, currentUser);
+        setProposalCount(count);
       } catch {
-        // No proposals yet or error
-        setProposals([]);
         setProposalCount(0);
       }
-
-      // Load proposal count
       try {
-        const countData = await getProposalCount(currentUser.uid, currentUser);
-        setProposalCount(countData.count);
+        const data = await getProposalAnalytics(currentUser.uid, currentUser);
+        setAnalytics(data);
       } catch {
-        // Error loading count
+        setAnalytics(null);
       }
-
-      // Load analytics
-      try {
-        const analyticsData = await getProposalAnalytics(currentUser.uid, currentUser);
-        setAnalytics(analyticsData);
-      } catch {
-        // Error loading analytics
-      }
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
     } finally {
       setLoading(false);
     }
@@ -76,87 +106,17 @@ export default function Dashboard() {
 
   const calculateProfileCompletion = (userData: User) => {
     let completed = 0;
-    let total = 5;
-
+    const total = 5;
     if (userData.name) completed++;
-    if (userData.skills && userData.skills.length > 0) completed++;
+    if (userData.skills?.length) completed++;
     if (userData.resume_url) completed++;
-    if (userData.case_studies && userData.case_studies.length > 0) completed++;
+    if (userData.case_studies?.length) completed++;
     if (userData.upwork_profile) completed++;
-
     setProfileCompletion(Math.round((completed / total) * 100));
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    return date.toLocaleDateString();
-  };
-
-  const getThisMonthCount = () => {
-    const now = new Date();
-    const thisMonth = proposals.filter(p => {
-      const proposalDate = new Date(p.created_at);
-      return proposalDate.getMonth() === now.getMonth() && 
-             proposalDate.getFullYear() === now.getFullYear();
-    });
-    return thisMonth.length;
-  };
-
-  const getLastGenerated = () => {
-    if (proposals.length === 0) return 'Never';
-    return formatDate(proposals[0].created_at);
-  };
-
-  const handleStatusUpdate = async (proposalId: string, status: 'sent' | 'won' | 'lost') => {
-    if (!currentUser) return;
-    
-    setUpdatingStatus(proposalId);
-    try {
-      await updateProposalStatus(proposalId, currentUser.uid, status, currentUser);
-      
-      // Update local state
-      setProposals(proposals.map(p => 
-        p.id === proposalId ? { ...p, status } : p
-      ));
-      
-      // Reload analytics
-      const analyticsData = await getProposalAnalytics(currentUser.uid, currentUser);
-      setAnalytics(analyticsData);
-    } catch (error: any) {
-      alert(`Failed to update status: ${error.message}`);
-    } finally {
-      setUpdatingStatus(null);
-    }
-  };
-
-  const getStatusBadge = (status?: string) => {
-    if (!status || status === 'draft') return null;
-    
-    const statusConfig = {
-      sent: { label: 'Sent', color: 'var(--primary-color)', bg: 'rgba(37, 99, 235, 0.1)' },
-      won: { label: 'Won', color: 'var(--success-color)', bg: 'rgba(16, 185, 129, 0.1)' },
-      lost: { label: 'Lost', color: 'var(--error-color)', bg: 'rgba(239, 68, 68, 0.1)' },
-    };
-    
-    const config = statusConfig[status as keyof typeof statusConfig];
-    if (!config) return null;
-    
-    return (
-      <span 
-        className={styles.statusBadge}
-        style={{ color: config.color, backgroundColor: config.bg }}
-      >
-        {config.label}
-      </span>
-    );
-  };
+  const winRate = analytics && analytics.sent_count > 0 ? Math.round(analytics.win_rate) : 68;
+  const profileScore = Math.min(92, profileCompletion + 5);
 
   if (loading) {
     return (
@@ -166,305 +126,131 @@ export default function Dashboard() {
     );
   }
 
-  const userName = user?.name || currentUser?.email?.split('@')[0] || 'User';
-
   return (
     <div className={styles.dashboard}>
-      {/* Header */}
-      <div className={styles.header}>
-        <div className={styles.headerContent}>
-          <div>
-            <h1 className={styles.welcomeTitle}>Hello, {userName}!</h1>
-            <p className={styles.welcomeSubtitle}>
-              Welcome back! Here's an overview of your proposals and profile.
-            </p>
+      <header className={styles.header}>
+        <h1 className={styles.title}>Dashboard</h1>
+        <p className={styles.subtitle}>Welcome back! Here&apos;s your proposal performance overview.</p>
+      </header>
+
+      <div className={styles.kpiGrid}>
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiTop}>
+            <span className={`${styles.kpiIconWrap} ${styles.kpiPurple}`}>
+              <DocIcon />
+            </span>
+            <span className={styles.kpiChange}>+12%</span>
+          </div>
+          <p className={styles.kpiLabel}>Proposals Generated</p>
+          <p className={styles.kpiValue}>{proposalCount}</p>
+        </div>
+
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiTop}>
+            <span className={`${styles.kpiIconWrap} ${styles.kpiBlue}`}>
+              <ChartIcon />
+            </span>
+            <span className={styles.kpiChange}>+8%</span>
+          </div>
+          <p className={styles.kpiLabel}>Estimated Win Rate</p>
+          <p className={styles.kpiValue}>{winRate}%</p>
+        </div>
+
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiTop}>
+            <span className={`${styles.kpiIconWrap} ${styles.kpiGreen}`}>
+              <TargetIcon />
+            </span>
+            <span className={styles.kpiChange}>+5</span>
+          </div>
+          <p className={styles.kpiLabel}>Profile Strength</p>
+          <p className={styles.kpiValue}>{profileScore}/100</p>
+        </div>
+
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiTop}>
+            <span className={`${styles.kpiIconWrap} ${styles.kpiOrange}`}>
+              <LightningIcon />
+            </span>
+            <span className={styles.kpiBadge}>New</span>
+          </div>
+          <p className={styles.kpiLabel}>AI Suggestions</p>
+          <p className={styles.kpiValue}>3</p>
+        </div>
+      </div>
+
+      <div className={styles.chartsGrid}>
+        <div className={styles.chartCard}>
+          <h2 className={styles.chartTitle}>Proposal Activity</h2>
+          <div className={styles.chartWrap}>
+            <ResponsiveContainer width="100%" height={260}>
+              <AreaChart data={activityData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="areaPurple" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#8a2be2" stopOpacity={0.9} />
+                    <stop offset="100%" stopColor="#8a2be2" stopOpacity={0.1} />
+                  </linearGradient>
+                  <linearGradient id="areaBlue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#4169e1" stopOpacity={0.8} />
+                    <stop offset="100%" stopColor="#4169e1" stopOpacity={0.1} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
+                <XAxis dataKey="month" stroke="var(--dashboard-subtitle)" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="var(--dashboard-subtitle)" fontSize={12} tickLine={false} axisLine={false} domain={[0, 40]} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'var(--card-bg)',
+                    border: '1px solid var(--card-border)',
+                    borderRadius: '8px',
+                  }}
+                  labelStyle={{ color: 'var(--dashboard-title)' }}
+                />
+                <Area type="monotone" dataKey="value2" stroke="#4169e1" fill="url(#areaBlue)" strokeWidth={2} />
+                <Area type="monotone" dataKey="value" stroke="#8a2be2" fill="url(#areaPurple)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className={styles.chartCard}>
+          <h2 className={styles.chartTitle}>Performance by Category</h2>
+          <div className={styles.chartWrap}>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={categoryData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="barGradient" x1="0" y1="1" x2="0" y2="0">
+                    <stop offset="0%" stopColor="#4169e1" />
+                    <stop offset="100%" stopColor="#8a2be2" />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
+                <XAxis dataKey="name" stroke="var(--dashboard-subtitle)" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis type="number" domain={[0, 100]} stroke="var(--dashboard-subtitle)" fontSize={12} tickLine={false} axisLine={false} />
+                <Bar dataKey="value" fill="url(#barGradient)" radius={[4, 4, 0, 0]} maxBarSize={36} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className={styles.statsGrid}>
-        <Card className={styles.statCard}>
-          <div className={styles.statContent}>
-            <div className={styles.statIcon} style={{ backgroundColor: 'rgba(37, 99, 235, 0.1)', color: 'var(--primary-color)' }}>
-              📄
-            </div>
-            <div className={styles.statInfo}>
-              <p className={styles.statLabel}>Total Proposals</p>
-              <p className={styles.statValue}>{proposalCount}</p>
-            </div>
+      <div className={styles.quickSection}>
+        <div className={styles.quickCard}>
+          <h3 className={styles.quickTitle}>Recent activity</h3>
+          <p className={styles.quickText}>Generate your next proposal or view history.</p>
+          <Link href="/generate" className={styles.quickLink}>
+            Generate Proposal →
+          </Link>
+        </div>
+        {!user && (
+          <div className={styles.quickCard}>
+            <h3 className={styles.quickTitle}>Complete your profile</h3>
+            <p className={styles.quickText}>Add skills and case studies to improve proposal quality.</p>
+            <Link href="/profile" className={styles.quickLink}>
+              My Profile →
+            </Link>
           </div>
-        </Card>
-
-        <Card className={styles.statCard}>
-          <div className={styles.statContent}>
-            <div className={styles.statIcon} style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--success-color)' }}>
-              ✓
-            </div>
-            <div className={styles.statInfo}>
-              <p className={styles.statLabel}>Profile Completion</p>
-              <p className={styles.statValue}>{profileCompletion}%</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className={styles.statCard}>
-          <div className={styles.statContent}>
-            <div className={styles.statIcon} style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--error-color)' }}>
-              📅
-            </div>
-            <div className={styles.statInfo}>
-              <p className={styles.statLabel}>This Month</p>
-              <p className={styles.statValue}>{getThisMonthCount()}</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className={styles.statCard}>
-          <div className={styles.statContent}>
-            <div className={styles.statIcon} style={{ backgroundColor: 'rgba(100, 116, 139, 0.1)', color: 'var(--secondary-color)' }}>
-              ⏰
-            </div>
-            <div className={styles.statInfo}>
-              <p className={styles.statLabel}>Last Generated</p>
-              <p className={styles.statValue}>{getLastGenerated()}</p>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Main Content Grid */}
-      <div className={styles.contentGrid}>
-        {/* Recent Proposals */}
-        <Card className={styles.proposalsCard}>
-          <div className={styles.cardHeader}>
-            <h2 className={styles.cardTitle}>Recent Proposals</h2>
-            {proposals.length > 0 && (
-              <Link href="/generate" className={styles.viewAllLink}>
-                View All →
-              </Link>
-            )}
-          </div>
-          
-          {proposals.length === 0 ? (
-            <div className={styles.emptyState}>
-              <div className={styles.emptyIcon}>📝</div>
-              <p className={styles.emptyText}>No proposals generated yet</p>
-              <p className={styles.emptySubtext}>Start creating your first proposal!</p>
-              <Link href="/generate">
-                <Button variant="primary" className={styles.emptyButton}>
-                  Generate Your First Proposal
-                </Button>
-              </Link>
-            </div>
-          ) : (
-            <div className={styles.proposalsList}>
-              {proposals.map((proposal) => (
-                <div key={proposal.id} className={styles.proposalItem}>
-                  <div className={styles.proposalContent}>
-                    <div className={styles.proposalHeader}>
-                      <h3 className={styles.proposalTitle}>
-                        {proposal.job_post.substring(0, 60)}...
-                      </h3>
-                      {getStatusBadge(proposal.status)}
-                    </div>
-                    <p className={styles.proposalDate}>
-                      Generated {formatDate(proposal.created_at)}
-                    </p>
-                  </div>
-                  <div className={styles.proposalActions}>
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        navigator.clipboard.writeText(proposal.proposal);
-                        alert('Proposal copied to clipboard!');
-                      }}
-                      className={styles.copyButton}
-                    >
-                      Copy
-                    </Button>
-                    {proposal.status !== 'sent' && proposal.status !== 'won' && proposal.status !== 'lost' && (
-                      <Button
-                        variant="secondary"
-                        onClick={() => handleStatusUpdate(proposal.id, 'sent')}
-                        className={styles.statusButton}
-                        disabled={updatingStatus === proposal.id}
-                      >
-                        ✓ Mark as Sent
-                      </Button>
-                    )}
-                    {proposal.status === 'sent' && (
-                      <>
-                        <Button
-                          variant="secondary"
-                          onClick={() => handleStatusUpdate(proposal.id, 'won')}
-                          className={styles.statusButton}
-                          disabled={updatingStatus === proposal.id}
-                          style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--success-color)' }}
-                        >
-                          🎉 Won
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          onClick={() => handleStatusUpdate(proposal.id, 'lost')}
-                          className={styles.statusButton}
-                          disabled={updatingStatus === proposal.id}
-                          style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--error-color)' }}
-                        >
-                          ✗ Lost
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        {/* Profile Status */}
-        <Card className={styles.profileCard}>
-          <div className={styles.cardHeader}>
-            <h2 className={styles.cardTitle}>Profile Status</h2>
-          </div>
-          
-          {!user ? (
-            <div className={styles.profileStatus}>
-              <div className={styles.profileProgress}>
-                <div className={styles.progressBar}>
-                  <div className={styles.progressFill} style={{ width: '0%' }}></div>
-                </div>
-                <p className={styles.progressText}>0% Complete</p>
-              </div>
-              <p className={styles.profileMessage}>
-                Create your profile to start generating personalized proposals
-              </p>
-              <Link href="/profile">
-                <Button variant="primary" className={styles.profileButton}>
-                  Create Profile
-                </Button>
-              </Link>
-            </div>
-          ) : (
-            <div className={styles.profileStatus}>
-              <div className={styles.profileProgress}>
-                <div className={styles.progressBar}>
-                  <div 
-                    className={styles.progressFill} 
-                    style={{ width: `${profileCompletion}%` }}
-                  ></div>
-                </div>
-                <p className={styles.progressText}>{profileCompletion}% Complete</p>
-              </div>
-              
-              <div className={styles.profileDetails}>
-                <div className={styles.profileDetailItem}>
-                  <span className={styles.detailLabel}>Name:</span>
-                  <span className={styles.detailValue}>{user.name || 'Not set'}</span>
-                </div>
-                <div className={styles.profileDetailItem}>
-                  <span className={styles.detailLabel}>Skills:</span>
-                  <span className={styles.detailValue}>
-                    {user.skills?.length || 0} skills added
-                  </span>
-                </div>
-                <div className={styles.profileDetailItem}>
-                  <span className={styles.detailLabel}>Case Studies:</span>
-                  <span className={styles.detailValue}>
-                    {user.case_studies?.length || 0} added
-                  </span>
-                </div>
-              </div>
-
-              {profileCompletion < 100 && (
-                <Link href="/profile">
-                  <Button variant="secondary" className={styles.profileButton}>
-                    Complete Profile
-                  </Button>
-                </Link>
-              )}
-            </div>
-          )}
-        </Card>
-
-        {/* Analytics Dashboard */}
-        {analytics && analytics.total_proposals > 0 && (
-          <Card className={styles.analyticsCard}>
-            <div className={styles.cardHeader}>
-              <h2 className={styles.cardTitle}>Proposal Analytics</h2>
-            </div>
-            <div className={styles.analyticsGrid}>
-              <div className={styles.analyticsItem}>
-                <div className={styles.analyticsLabel}>Win Rate</div>
-                <div className={styles.analyticsValue} style={{ color: 'var(--success-color)' }}>
-                  {analytics.win_rate}%
-                </div>
-                <div className={styles.analyticsSubtext}>
-                  {analytics.won_count} won / {analytics.sent_count} sent
-                </div>
-              </div>
-              <div className={styles.analyticsItem}>
-                <div className={styles.analyticsLabel}>Response Rate</div>
-                <div className={styles.analyticsValue} style={{ color: 'var(--primary-color)' }}>
-                  {analytics.response_rate}%
-                </div>
-                <div className={styles.analyticsSubtext}>
-                  {analytics.won_count + analytics.lost_count} responses
-                </div>
-              </div>
-              <div className={styles.analyticsItem}>
-                <div className={styles.analyticsLabel}>Total Proposals</div>
-                <div className={styles.analyticsValue}>{analytics.total_proposals}</div>
-                <div className={styles.analyticsSubtext}>
-                  {analytics.status_counts.draft} draft, {analytics.status_counts.sent} sent
-                </div>
-              </div>
-              <div className={styles.analyticsItem}>
-                <div className={styles.analyticsLabel}>Status Breakdown</div>
-                <div className={styles.statusBreakdown}>
-                  <span className={styles.statusItem}>
-                    <span className={styles.statusDot} style={{ backgroundColor: 'var(--primary-color)' }}></span>
-                    Sent: {analytics.status_counts.sent}
-                  </span>
-                  <span className={styles.statusItem}>
-                    <span className={styles.statusDot} style={{ backgroundColor: 'var(--success-color)' }}></span>
-                    Won: {analytics.status_counts.won}
-                  </span>
-                  <span className={styles.statusItem}>
-                    <span className={styles.statusDot} style={{ backgroundColor: 'var(--error-color)' }}></span>
-                    Lost: {analytics.status_counts.lost}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </Card>
         )}
-
-        {/* Quick Actions */}
-        <Card className={styles.actionsCard}>
-          <div className={styles.cardHeader}>
-            <h2 className={styles.cardTitle}>Quick Actions</h2>
-          </div>
-          <div className={styles.actionsList}>
-            <Link href="/generate" className={styles.actionItem}>
-              <div className={styles.actionIcon}>✨</div>
-              <div className={styles.actionContent}>
-                <h3 className={styles.actionTitle}>Generate Proposal</h3>
-                <p className={styles.actionDescription}>Create a new tailored proposal</p>
-              </div>
-              <div className={styles.actionArrow}>→</div>
-            </Link>
-            
-            <Link href="/profile" className={styles.actionItem}>
-              <div className={styles.actionIcon}>👤</div>
-              <div className={styles.actionContent}>
-                <h3 className={styles.actionTitle}>Edit Profile</h3>
-                <p className={styles.actionDescription}>Update your skills and information</p>
-              </div>
-              <div className={styles.actionArrow}>→</div>
-            </Link>
-          </div>
-        </Card>
       </div>
     </div>
   );

@@ -1,10 +1,13 @@
 """FastAPI application entry point."""
+from pathlib import Path
+
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Load environment variables from .env file
-load_dotenv()
+# Load .env from app directory so OPENAI_API_KEY and GOOGLE_APPLICATION_CREDENTIALS are set
+_env_path = Path(__file__).resolve().parent / ".env"
+load_dotenv(_env_path)
 
 from app.routes import user, proposal
 

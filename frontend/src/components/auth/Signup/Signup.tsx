@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { useState, FormEvent } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
-import styles from './Signup.module.css';
+import { useState, FormEvent } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
+import styles from "./Signup.module.css";
 
 export default function Signup() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const { signup, loginWithGoogle } = useAuth();
@@ -18,15 +18,15 @@ export default function Signup() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError("Passwords do not match");
       return;
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError("Password must be at least 6 characters");
       return;
     }
 
@@ -34,23 +34,23 @@ export default function Signup() {
 
     try {
       await signup(email, password);
-      router.push('/onboarding');
+      router.push("/");
     } catch (err: any) {
-      setError(err.message || 'Failed to create account');
+      setError(err.message || "Failed to create account");
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
-    setError('');
+    setError("");
     setGoogleLoading(true);
 
     try {
       await loginWithGoogle(rememberMe);
-      router.push('/onboarding');
+      router.push("/");
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in with Google');
+      setError(err.message || "Failed to sign in with Google");
     } finally {
       setGoogleLoading(false);
     }
@@ -139,14 +139,18 @@ export default function Signup() {
               </label>
             </div>
 
-            <button type="submit" className={styles.submitButton} disabled={loading}>
-              {loading ? 'Creating account...' : 'Sign up'}
+            <button
+              type="submit"
+              className={styles.submitButton}
+              disabled={loading}
+            >
+              {loading ? "Creating account..." : "Sign up"}
             </button>
           </form>
 
           <div className={styles.footerLinks}>
             <p>
-              Already have an account?{' '}
+              Already have an account?{" "}
               <a href="/login" className={styles.link}>
                 Sign in
               </a>
@@ -164,10 +168,15 @@ export default function Signup() {
             disabled={googleLoading || loading}
           >
             {googleLoading ? (
-              'Signing in...'
+              "Signing in..."
             ) : (
               <>
-                <svg className={styles.googleIcon} viewBox="0 0 24 24" width="20" height="20">
+                <svg
+                  className={styles.googleIcon}
+                  viewBox="0 0 24 24"
+                  width="20"
+                  height="20"
+                >
                   <path
                     fill="#4285F4"
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -200,16 +209,22 @@ export default function Signup() {
           </div>
           <h2 className={styles.welcomeTitle}>Welcome to Proposal Optimizer</h2>
           <p className={styles.welcomeText}>
-            Proposal Optimizer helps freelancers to build compelling and professional Upwork proposals 
-            using AI. Join us and start winning more projects today.
+            Proposal Optimizer helps freelancers to build compelling and
+            professional Upwork proposals using AI. Join us and start winning
+            more projects today.
           </p>
-          <p className={styles.welcomeStats}>More than 1k freelancers joined us, it's your turn</p>
+          <p className={styles.welcomeStats}>
+            More than 1k freelancers joined us, it's your turn
+          </p>
 
           <div className={styles.featureCard}>
             <div className={styles.featureContent}>
-              <h3 className={styles.featureTitle}>Get your right job and right place apply now</h3>
+              <h3 className={styles.featureTitle}>
+                Get your right job and right place apply now
+              </h3>
               <p className={styles.featureText}>
-                Be among the first freelancers to experience the easiest way to create winning proposals.
+                Be among the first freelancers to experience the easiest way to
+                create winning proposals.
               </p>
             </div>
             <div className={styles.avatars}>

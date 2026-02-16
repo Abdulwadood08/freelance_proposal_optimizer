@@ -18,6 +18,66 @@
   --border-color: #e2e8f0;
   --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+  /* Auth screen – light mode */
+  --auth-bg: #e8eaf0;
+  --auth-bg-glow-left: rgba(138, 43, 226, 0.15);
+  --auth-bg-glow-right: rgba(65, 105, 225, 0.15);
+  --auth-card-bg: rgba(255, 255, 255, 0.75);
+  --auth-card-border: rgba(255, 255, 255, 0.5);
+  --auth-text: #1e293b;
+  --auth-text-muted: #64748b;
+  --auth-input-bg: rgba(241, 245, 249, 0.9);
+  --auth-input-border: rgba(226, 232, 240, 0.9);
+  --auth-tab-inactive-bg: rgba(0, 0, 0, 0.04);
+  --auth-help-bg: rgba(0, 0, 0, 0.08);
+  --auth-accent-start: #8a2be2;
+  --auth-accent-end: #4169e1;
+
+  /* Dashboard / app layout – light mode */
+  --app-bg: #f1f5f9;
+  --sidebar-bg: #ffffff;
+  --sidebar-border: #e2e8f0;
+  --sidebar-text: #1e293b;
+  --sidebar-text-muted: #64748b;
+  --sidebar-active-bg: #4c1d95;
+  --sidebar-active-text: #ffffff;
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --dashboard-title: #1e293b;
+  --dashboard-subtitle: #64748b;
+  --kpi-change-positive: #10b981;
+  --chart-grid: #e2e8f0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --auth-bg: #1e1f30;
+    --auth-bg-glow-left: rgba(138, 43, 226, 0.25);
+    --auth-bg-glow-right: rgba(65, 105, 225, 0.25);
+    --auth-card-bg: rgba(40, 42, 58, 0.65);
+    --auth-card-border: rgba(255, 255, 255, 0.08);
+    --auth-text: #f1f5f9;
+    --auth-text-muted: #94a3b8;
+    --auth-input-bg: rgba(51, 53, 72, 0.8);
+    --auth-input-border: rgba(148, 163, 184, 0.25);
+    --auth-tab-inactive-bg: rgba(255, 255, 255, 0.05);
+    --auth-help-bg: rgba(255, 255, 255, 0.1);
+    /* Dashboard / app layout – dark mode */
+    --app-bg: #1f2028;
+    --sidebar-bg: #2a2e3d;
+    --sidebar-border: rgba(255, 255, 255, 0.06);
+    --sidebar-text: #f1f5f9;
+    --sidebar-text-muted: #94a3b8;
+    --sidebar-active-bg: #4c1d95;
+    --sidebar-active-text: #ffffff;
+    --card-bg: #252830;
+    --card-border: rgba(255, 255, 255, 0.06);
+    --dashboard-title: #ffffff;
+    --dashboard-subtitle: #94a3b8;
+    --kpi-change-positive: #22c55e;
+    --chart-grid: rgba(255, 255, 255, 0.08);
+  }
 }
 
 body {

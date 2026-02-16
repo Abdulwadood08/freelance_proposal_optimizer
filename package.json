@@ -4,6 +4,7 @@
   "description": "Monorepo root – run backend and frontend from their directories.",
   "scripts": {
     "dev:frontend": "cd frontend && npm run dev",
+    "dev:start": "cd frontend && npm run dev:start",
     "build:frontend": "cd frontend && npm run build",
     "install:frontend": "cd frontend && npm install"
   }

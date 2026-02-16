@@ -1,0 +1,392 @@
+.wrapper {
+  min-height: 100vh;
+  width: 100%;
+  background-color: var(--auth-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem 4rem;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.glow,
+.glowRight {
+  position: fixed;
+  width: 50%;
+  max-width: 480px;
+  height: 60vh;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.glow {
+  left: -10%;
+  top: 20%;
+  background: var(--auth-bg-glow-left);
+}
+
+.glowRight {
+  right: -10%;
+  top: 20%;
+  background: var(--auth-bg-glow-right);
+}
+
+.header {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.logoBox {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--auth-accent-start), var(--auth-accent-end));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 4px 20px rgba(138, 43, 226, 0.35);
+}
+
+.logoIconSvg {
+  width: 28px;
+  height: 28px;
+}
+
+.appName {
+  font-size: clamp(1.75rem, 5vw, 2.25rem);
+  font-weight: 700;
+  color: var(--auth-text);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.tagline {
+  font-size: clamp(0.875rem, 2.5vw, 1rem);
+  color: var(--auth-text-muted);
+  margin: 0;
+  max-width: 320px;
+}
+
+.card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  background: var(--auth-card-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--auth-card-border);
+  border-radius: 20px;
+  padding: 0 0 1.75rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+}
+
+.tabs {
+  display: flex;
+  padding: 0.5rem;
+  gap: 0.25rem;
+  border-radius: 14px 14px 0 0;
+}
+
+.tab {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--auth-text-muted);
+  background: var(--auth-tab-inactive-bg);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.2s, background 0.2s;
+}
+
+.tab:hover {
+  color: var(--auth-text);
+}
+
+.tabActive {
+  background: linear-gradient(135deg, var(--auth-accent-start), var(--auth-accent-end));
+  color: white;
+}
+
+.form,
+.error {
+  padding: 0 1.5rem;
+}
+
+.error {
+  margin: 0 1.5rem 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--error-color);
+  border-radius: 10px;
+  font-size: 0.875rem;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.form {
+  padding-top: 0.25rem;
+}
+
+.formGroup {
+  margin-bottom: 1.25rem;
+}
+
+.label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--auth-text);
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.inputIconSvg {
+  position: absolute;
+  left: 1rem;
+  width: 20px;
+  height: 20px;
+  color: var(--auth-text-muted);
+  pointer-events: none;
+}
+
+.input {
+  width: 100%;
+  padding: 0.875rem 1rem 0.875rem 2.75rem;
+  font-size: 1rem;
+  color: var(--auth-text);
+  background: var(--auth-input-bg);
+  border: 1px solid var(--auth-input-border);
+  border-radius: 12px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input::placeholder {
+  color: var(--auth-text-muted);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--auth-accent-start);
+  box-shadow: 0 0 0 3px rgba(138, 43, 226, 0.15);
+}
+
+.rememberMe {
+  margin-bottom: 1.25rem;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--auth-text-muted);
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--auth-accent-start);
+}
+
+.submitButton {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, var(--auth-accent-start), var(--auth-accent-end));
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.submitButton:hover:not(:disabled) {
+  opacity: 0.95;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(138, 43, 226, 0.35);
+}
+
+.submitButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.divider {
+  margin: 1.5rem 1.5rem 1rem;
+  text-align: center;
+  position: relative;
+  color: var(--auth-text-muted);
+  font-size: 0.8rem;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 42%;
+  height: 1px;
+  background: var(--auth-input-border);
+}
+
+.divider::before {
+  left: 0;
+}
+
+.divider::after {
+  right: 0;
+}
+
+.googleButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: calc(100% - 3rem);
+  margin: 0 1.5rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--auth-text);
+  background: var(--auth-input-bg);
+  border: 1px solid var(--auth-input-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.googleButton:hover:not(:disabled) {
+  border-color: var(--auth-accent-start);
+  background: var(--auth-tab-inactive-bg);
+}
+
+.googleButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.googleIcon {
+  flex-shrink: 0;
+}
+
+.legal {
+  position: relative;
+  z-index: 1;
+  margin-top: 1.5rem;
+  padding: 0 1rem;
+  text-align: center;
+  font-size: clamp(0.75rem, 2vw, 0.8rem);
+  color: var(--auth-text-muted);
+  max-width: 380px;
+}
+
+.legalLink {
+  color: var(--auth-text-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.legalLink:hover {
+  color: var(--auth-accent-start);
+}
+
+.helpButton {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--auth-help-bg);
+  color: var(--auth-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.helpButton:hover {
+  background: var(--auth-input-border);
+  transform: scale(1.05);
+}
+
+@media (max-width: 480px) {
+  .wrapper {
+    padding: 1rem 0.75rem 4rem;
+  }
+
+  .card {
+    border-radius: 16px;
+    padding-bottom: 1.5rem;
+  }
+
+  .tabs {
+    padding: 0.4rem;
+  }
+
+  .tab {
+    padding: 0.65rem 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .form,
+  .error {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+
+  .error {
+    margin-left: 1.25rem;
+    margin-right: 1.25rem;
+  }
+
+  .googleButton {
+    width: calc(100% - 2.5rem);
+    margin-left: 1.25rem;
+    margin-right: 1.25rem;
+  }
+
+  .divider {
+    margin-left: 1.25rem;
+    margin-right: 1.25rem;
+  }
+
+  .helpButton {
+    bottom: 1rem;
+    right: 1rem;
+    width: 36px;
+    height: 36px;
+    font-size: 1.1rem;
+  }
+}

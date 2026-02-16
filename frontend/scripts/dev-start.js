@@ -6,6 +6,7 @@
  * - Runs next dev
  * Use when: "localhost refused to connect" or "Unable to acquire lock"
  */
+/* eslint-disable @typescript-eslint/no-require-imports -- Node script, CommonJS required */
 
 const { execSync, spawn } = require('child_process');
 const path = require('path');
@@ -17,7 +18,7 @@ function run(cmd, silent = false) {
       stdio: silent ? 'ignore' : 'inherit',
       shell: true,
     });
-  } catch (_) {
+  } catch {
     // ignore errors (e.g. no process to kill)
   }
 }

@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import OnboardingWizard from '@/components/onboarding/OnboardingWizard/OnboardingWizard';
 
 export default function OnboardingPage() {
   const { currentUser, loading } = useAuth();
@@ -12,6 +11,8 @@ export default function OnboardingPage() {
   useEffect(() => {
     if (!loading && !currentUser) {
       router.push('/login');
+    } else if (!loading && currentUser) {
+      router.replace('/');
     }
   }, [currentUser, loading, router]);
 
@@ -30,10 +31,5 @@ export default function OnboardingPage() {
     );
   }
 
-  if (!currentUser) {
-    return null;
-  }
-
-  return <OnboardingWizard />;
+  return null;
 }
-
