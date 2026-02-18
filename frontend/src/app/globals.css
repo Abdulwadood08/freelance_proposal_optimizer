@@ -52,6 +52,9 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    --text-primary: #f1f5f9;
+    --bg-color: #252830;
+    --bg-secondary: #1f2028;
     --auth-bg: #1e1f30;
     --auth-bg-glow-left: rgba(138, 43, 226, 0.25);
     --auth-bg-glow-right: rgba(65, 105, 225, 0.25);
@@ -93,5 +96,21 @@ body {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+/* Ensure all form fields have visible text (light/dark theme) */
+input,
+textarea,
+select {
+  color: var(--text-primary) !important;
+  background-color: var(--card-bg) !important;
+}
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-secondary);
+}
+input:disabled,
+textarea:disabled {
+  opacity: 0.85;
 }
 

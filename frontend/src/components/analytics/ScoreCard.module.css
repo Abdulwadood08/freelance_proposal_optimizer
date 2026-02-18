@@ -1,0 +1,41 @@
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--dashboard-subtitle);
+  margin: 0 0 0.75rem 0;
+}
+
+.score {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--dashboard-title);
+  margin-bottom: 0.75rem;
+}
+
+.progressBar {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(138, 43, 226, 0.15);
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #8a2be2, #4169e1);
+  transition: width 0.3s ease;
+}
+
+.message {
+  font-size: 0.875rem;
+  color: var(--dashboard-subtitle);
+  margin: 0;
+}

@@ -1,9 +1,33 @@
 """Firestore client service for database operations."""
 import os
 import json
+from datetime import datetime
 from typing import Optional, Dict, Any, List
 from google.cloud import firestore
 from google.oauth2 import service_account
+
+
+def _make_json_serializable(obj: Any) -> Any:
+    """Convert Firestore doc dict to JSON-serializable form (datetime/Timestamp -> ISO string)."""
+    if obj is None:
+        return None
+    if isinstance(obj, (str, int, float, bool)):
+        return obj
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    if hasattr(obj, "isoformat") and callable(getattr(obj, "isoformat")):
+        try:
+            return obj.isoformat()
+        except Exception:
+            return str(obj)
+    if isinstance(obj, dict):
+        return {k: _make_json_serializable(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_make_json_serializable(v) for v in obj]
+    if isinstance(obj, bytes):
+        return obj.decode("utf-8", errors="replace")
+    # Firestore GeoPoint, DocumentReference, or any other non-serializable
+    return str(obj)
 
 
 class FirestoreClient:
@@ -53,6 +77,17 @@ class FirestoreClient:
         """
         doc_ref = self.db.collection("users").document(user_id)
         doc_ref.set(user_data)
+
+    def update_user(self, user_id: str, updates: Dict[str, Any]) -> None:
+        """
+        Update user document with partial data (merge). Creates doc if not present.
+        
+        Args:
+            user_id: Document ID for the user
+            updates: Dictionary of fields to update (name, email_notifications, proposal_alerts, etc.)
+        """
+        doc_ref = self.db.collection("users").document(user_id)
+        doc_ref.set(updates, merge=True)
     
     def get_user(self, user_id: str) -> Optional[Dict[str, Any]]:
         """
@@ -104,27 +139,26 @@ class FirestoreClient:
 
     def get_user_proposals(self, user_id: str, limit: int = 10) -> List[Dict[str, Any]]:
         """
-        Get proposals for a specific user, ordered by creation date.
-        
-        Args:
-            user_id: User ID to get proposals for
-            limit: Maximum number of proposals to return
-            
-        Returns:
-            List of proposal dictionaries
+        Get proposals for a specific user, ordered by creation date (newest first).
+        Uses in-memory sort to avoid requiring a Firestore composite index.
         """
-        from google.cloud.firestore import Query
-        
         proposals_ref = self.db.collection("proposals")
-        query = proposals_ref.where("user_id", "==", user_id).order_by("created_at", direction=Query.DESCENDING).limit(limit)
+        fetch_limit = min(500, max(limit, 50))  # fetch enough to sort, cap at 500
+        query = proposals_ref.where("user_id", "==", user_id).limit(fetch_limit)
         
         proposals = []
         for doc in query.stream():
-            proposal_data = doc.to_dict()
+            proposal_data = doc.to_dict() or {}
             proposal_data["id"] = doc.id
-            proposals.append(proposal_data)
+            # Ensure JSON-serializable (e.g. Firestore Timestamp -> ISO string)
+            proposals.append(_make_json_serializable(proposal_data))
         
-        return proposals
+        # Sort by created_at descending (newest first), then take limit
+        proposals.sort(
+            key=lambda p: p.get("created_at") or "",
+            reverse=True
+        )
+        return proposals[:limit]
     
     def get_proposal_count(self, user_id: str) -> int:
         """
@@ -418,19 +452,12 @@ class FirestoreClient:
     
     def get_user_templates(self, user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
         """
-        Get templates for a specific user, ordered by creation date.
-        
-        Args:
-            user_id: User ID to get templates for
-            limit: Maximum number of templates to return
-            
-        Returns:
-            List of template dictionaries
+        Get templates for a specific user, ordered by creation date (newest first).
+        Uses in-memory sort to avoid requiring a Firestore composite index.
         """
-        from google.cloud.firestore import Query
-        
         templates_ref = self.db.collection("templates")
-        query = templates_ref.where("user_id", "==", user_id).order_by("created_at", direction=Query.DESCENDING).limit(limit)
+        fetch_limit = min(200, max(limit, 50))
+        query = templates_ref.where("user_id", "==", user_id).limit(fetch_limit)
         
         templates = []
         for doc in query.stream():
@@ -438,7 +465,8 @@ class FirestoreClient:
             template_data["id"] = doc.id
             templates.append(template_data)
         
-        return templates
+        templates.sort(key=lambda t: t.get("created_at") or "", reverse=True)
+        return templates[:limit]
     
     def get_template(self, template_id: str) -> Optional[Dict[str, Any]]:
         """

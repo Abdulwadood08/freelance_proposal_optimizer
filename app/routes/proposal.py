@@ -1,12 +1,28 @@
 """Proposal-related API endpoints."""
+import logging
+
 from fastapi import APIRouter, HTTPException, status, Query
+from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 from typing import List, Optional
 
 from app.services.firestore_client import get_firestore_client
+
+
+def _get_firestore():
+    """Get Firestore client; raise 503 if Firebase is not configured."""
+    try:
+        return get_firestore_client()
+    except (FileNotFoundError, ValueError) as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Service temporarily unavailable. Backend Firebase is not configured.",
+        ) from e
+
+
 from app.services.openai_client import get_openai_client
 
-
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -78,7 +94,7 @@ async def generate_proposal(request: ProposalGenerateRequest):
     """
     try:
         # 1. Fetch user profile from Firestore
-        firestore_client = get_firestore_client()
+        firestore_client = _get_firestore()
         user_data = firestore_client.get_user(request.user_id)
         
         if not user_data:
@@ -173,13 +189,17 @@ async def get_user_proposals(
         List of proposals
     """
     try:
-        firestore_client = get_firestore_client()
+        firestore_client = _get_firestore()
         proposals = firestore_client.get_user_proposals(user_id, limit)
-        return {"proposals": proposals, "count": len(proposals)}
+        # Ensure response is JSON-serializable (handles datetime, bytes, etc.)
+        return jsonable_encoder({"proposals": proposals, "count": len(proposals)})
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.exception("get_user_proposals failed for user_id=%s: %s", user_id, e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve proposals: {str(e)}"
+            detail="Failed to retrieve proposals. Please try again.",
         )
 
 
@@ -195,7 +215,7 @@ async def get_proposal_count(user_id: str):
         Total count of proposals
     """
     try:
-        firestore_client = get_firestore_client()
+        firestore_client = _get_firestore()
         count = firestore_client.get_proposal_count(user_id)
         return {"count": count}
     except Exception as e:
@@ -218,7 +238,7 @@ async def get_proposal(proposal_id: str, user_id: str = Query(...)):
         Proposal data
     """
     try:
-        firestore_client = get_firestore_client()
+        firestore_client = _get_firestore()
         proposal = firestore_client.get_proposal(proposal_id)
         
         if not proposal:
@@ -262,7 +282,7 @@ async def update_proposal(
         Success response
     """
     try:
-        firestore_client = get_firestore_client()
+        firestore_client = _get_firestore()
         
         # Build update data (only include fields that are provided)
         update_data = {}
@@ -321,7 +341,7 @@ async def delete_proposal(proposal_id: str, user_id: str = Query(...)):
         Success response
     """
     try:
-        firestore_client = get_firestore_client()
+        firestore_client = _get_firestore()
         success = firestore_client.delete_proposal(
             proposal_id=proposal_id,
             user_id=user_id
@@ -366,7 +386,7 @@ async def update_proposal_status(
         Success response
     """
     try:
-        firestore_client = get_firestore_client()
+        firestore_client = _get_firestore()
         success = firestore_client.update_proposal_status(
             proposal_id=proposal_id,
             user_id=user_id,
@@ -406,7 +426,7 @@ async def get_proposal_analytics(user_id: str):
         Analytics data including success rates, status counts, etc.
     """
     try:
-        firestore_client = get_firestore_client()
+        firestore_client = _get_firestore()
         analytics = firestore_client.get_proposal_analytics(user_id)
         return analytics
     except Exception as e:
@@ -429,7 +449,7 @@ async def analyze_job_post(request: JobPostAnalysisRequest):
     """
     try:
         # 1. Fetch user profile from Firestore
-        firestore_client = get_firestore_client()
+        firestore_client = _get_firestore()
         user_data = firestore_client.get_user(request.user_id)
         
         if not user_data:
@@ -485,7 +505,7 @@ async def score_proposal(request: ProposalScoringRequest):
     """
     try:
         # 1. Fetch user profile to get skills
-        firestore_client = get_firestore_client()
+        firestore_client = _get_firestore()
         user_data = firestore_client.get_user(request.user_id)
         
         if not user_data:
@@ -543,7 +563,7 @@ async def create_template(
         Created template with ID
     """
     try:
-        firestore_client = get_firestore_client()
+        firestore_client = _get_firestore()
         
         template_data = {
             "name": request.name,
@@ -586,7 +606,7 @@ async def get_user_templates(
         List of templates
     """
     try:
-        firestore_client = get_firestore_client()
+        firestore_client = _get_firestore()
         templates = firestore_client.get_user_templates(user_id, limit)
         return {"templates": templates, "count": len(templates)}
     except Exception as e:
@@ -612,7 +632,7 @@ async def get_template(
         Template data
     """
     try:
-        firestore_client = get_firestore_client()
+        firestore_client = _get_firestore()
         template = firestore_client.get_template(template_id)
         
         if not template:
@@ -656,7 +676,7 @@ async def update_template(
         Success response
     """
     try:
-        firestore_client = get_firestore_client()
+        firestore_client = _get_firestore()
         
         # Build update data (only include fields that are provided)
         update_data = {}
@@ -720,7 +740,7 @@ async def delete_template(
         Success response
     """
     try:
-        firestore_client = get_firestore_client()
+        firestore_client = _get_firestore()
         success = firestore_client.delete_template(
             template_id=template_id,
             user_id=user_id

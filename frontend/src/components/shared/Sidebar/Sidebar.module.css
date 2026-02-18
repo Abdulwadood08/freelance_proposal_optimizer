@@ -9,7 +9,9 @@
   display: flex;
   flex-direction: column;
   z-index: 1001;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
 .sidebarContent {
@@ -34,7 +36,11 @@
   height: 44px;
   border-radius: 50%;
   border: 2px solid rgba(138, 43, 226, 0.5);
-  background: linear-gradient(135deg, rgba(138, 43, 226, 0.2), rgba(65, 105, 225, 0.2));
+  background: linear-gradient(
+    135deg,
+    rgba(138, 43, 226, 0.2),
+    rgba(65, 105, 225, 0.2)
+  );
   display: flex;
   align-items: center;
   justify-content: center;
@@ -87,7 +93,9 @@
   border-radius: 10px;
   color: var(--sidebar-text-muted);
   text-decoration: none;
-  transition: background 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
   font-weight: 500;
   font-size: 0.9375rem;
 }
@@ -129,36 +137,19 @@
   border-top: 1px solid var(--sidebar-border);
 }
 
-.userEmail {
-  font-size: 0.75rem;
-  color: var(--sidebar-text-muted);
-  margin-bottom: 0.75rem;
-  word-break: break-all;
-  padding: 0 0.25rem;
-}
-
-.logoutBtn {
-  width: 100%;
-  padding: 0.625rem 1rem;
+.logoutLink {
   font-size: 0.875rem;
-  font-weight: 500;
   color: var(--sidebar-text-muted);
-  background: transparent;
-  border: 1px solid var(--sidebar-border);
-  border-radius: 8px;
+  background: none;
+  border: none;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  padding: 0.25rem 0;
+  text-decoration: none;
+  transition: color 0.2s;
 }
 
-.logoutBtn:hover {
-  background: rgba(0, 0, 0, 0.05);
+.logoutLink:hover {
   color: var(--sidebar-text);
-}
-
-@media (prefers-color-scheme: dark) {
-  .logoutBtn:hover {
-    background: rgba(255, 255, 255, 0.08);
-  }
 }
 
 /* Mobile */
@@ -186,7 +177,9 @@
   height: 2px;
   background: var(--sidebar-text);
   border-radius: 1px;
-  transition: transform 0.2s, opacity 0.2s;
+  transition:
+    transform 0.2s,
+    opacity 0.2s;
 }
 
 .overlay {
@@ -199,8 +192,12 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @media (max-width: 968px) {

@@ -1,201 +1,552 @@
-.description {
-  margin-bottom: 2rem;
-  color: var(--text-secondary);
+/* Profile Builder – match ProposalAI screenshot (dark purple/blue theme) */
+.wrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 1.5rem;
+  align-items: flex-start;
+  max-width: 1400px;
 }
 
-.message {
-  padding: 1rem;
-  border-radius: 0.5rem;
-  margin-bottom: 1rem;
+.mainColumn {
+  flex: 1;
+  min-width: 0;
 }
 
-.messageSuccess {
-  background-color: #d1fae5;
-  color: #065f46;
-  border: 1px solid #10b981;
+.sidebarColumn {
+  width: 320px;
+  flex-shrink: 0;
 }
 
-.messageError {
-  background-color: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #ef4444;
+@media (max-width: 1100px) {
+  .wrapper {
+    flex-direction: column;
+  }
+  .sidebarColumn {
+    width: 100%;
+  }
 }
 
-.formGroup {
+/* ----- Header ----- */
+.header {
   margin-bottom: 1.5rem;
 }
 
-.formLabel {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: var(--text-primary);
+.title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--dashboard-title);
+  margin-bottom: 0.25rem;
 }
 
-.formInput {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid var(--border-color);
-  border-radius: 0.5rem;
+.subtitle {
+  font-size: 0.9375rem;
+  color: var(--dashboard-subtitle);
+}
+
+/* ----- Profile Strength ----- */
+.strengthSection {
+  margin-bottom: 2rem;
+}
+
+.strengthTitle {
   font-size: 1rem;
-  transition: border-color 0.2s;
+  font-weight: 600;
+  color: var(--dashboard-title);
+  margin-bottom: 0.5rem;
 }
 
-.formInput:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+.strengthQuestion {
+  font-size: 0.9375rem;
+  color: var(--dashboard-subtitle);
+  margin-bottom: 0.75rem;
 }
 
-.inputGroup {
+.progressBar {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(138, 43, 226, 0.15);
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #8a2be2, #4169e1);
+  transition: width 0.3s ease;
+}
+
+.progressLabel {
   display: flex;
-  gap: 0.5rem;
+  justify-content: flex-end;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--dashboard-title);
+  margin-bottom: 1rem;
 }
 
-.inputGroup .formInput {
-  flex: 1;
-}
-
-.tagInput {
+.checklist {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  border: 1px solid var(--border-color);
-  border-radius: 0.5rem;
-  min-height: 50px;
+  gap: 0.75rem 1.5rem;
+  font-size: 0.875rem;
 }
 
-.tag {
-  background-color: var(--primary-color);
-  color: white;
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-  font-size: 0.875rem;
+.checkItem {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  color: var(--dashboard-subtitle);
+}
+
+.checkItem.done {
+  color: var(--success-color);
+}
+
+.checkItem.done::before {
+  content: "✓";
+  font-weight: bold;
+}
+
+.checkItem.pending {
+  color: #8a2be2;
+}
+
+/* ----- Section blocks ----- */
+.section {
+  margin-bottom: 2rem;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--dashboard-title);
+}
+
+.sectionIcon {
+  width: 18px;
+  height: 18px;
+  color: var(--dashboard-subtitle);
+}
+
+/* Skills input row */
+.skillsRow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 0.75rem;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background: var(--card-bg);
+  margin-bottom: 0.5rem;
+}
+
+.skillsRow input {
+  flex: 1;
+  min-width: 180px;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: transparent;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+}
+
+.skillsRow input::placeholder {
+  color: var(--text-secondary);
+}
+
+.skillsRow input:focus {
+  outline: none;
+}
+
+.addSkillBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #8a2be2, #4169e1);
+  color: white;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.2s;
+}
+
+.addSkillBtn:hover {
+  opacity: 0.9;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  background: rgba(138, 43, 226, 0.12);
+  color: #8a2be2;
 }
 
 .tagRemove {
   cursor: pointer;
+  opacity: 0.8;
   font-weight: bold;
 }
 
-.tagInput input {
-  border: none;
-  outline: none;
-  flex: 1;
-  min-width: 150px;
-  font-size: 1rem;
+.tagRemove:hover {
+  opacity: 1;
 }
 
-.addButton {
+/* Resume upload zone */
+.uploadZone {
+  border: 2px dashed var(--card-border);
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  background: rgba(138, 43, 226, 0.03);
+  margin-bottom: 0.75rem;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.uploadZone.dragging {
+  border-color: #8a2be2;
+  background: rgba(138, 43, 226, 0.08);
+}
+
+.uploadIcon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 1rem;
+  color: var(--dashboard-subtitle);
+}
+
+.uploadZone p {
+  font-size: 0.9375rem;
+  color: var(--dashboard-subtitle);
+  margin-bottom: 0.25rem;
+}
+
+.uploadZone .hint {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.uploadBtnRow {
+  display: flex;
+  justify-content: flex-end;
   margin-top: 0.5rem;
+}
+
+.uploadBtn {
+  padding: 0.5rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, #8a2be2, #4169e1);
+  color: white;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.uploadBtn:hover {
+  opacity: 0.9;
+}
+
+/* Work experience */
+.expList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.expCard {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background: var(--card-bg);
+}
+
+.expCardTitle {
+  font-weight: 600;
+  color: var(--dashboard-title);
+  margin-bottom: 0.25rem;
+}
+
+.expCardMeta {
+  font-size: 0.875rem;
+  color: var(--dashboard-subtitle);
+}
+
+.addExpBtn {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: transparent;
+  color: var(--sidebar-text);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.addExpBtn:hover {
+  background: rgba(138, 43, 226, 0.08);
+}
+
+/* Case studies / projects – placeholder cards */
+.projectsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.projectCardPlaceholder {
+  aspect-ratio: 4/3;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(65, 105, 225, 0.15), rgba(138, 43, 226, 0.15));
+  border: 1px dashed var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.projectCardPlaceholder:hover {
+  border-color: #8a2be2;
+  background: linear-gradient(135deg, rgba(65, 105, 225, 0.2), rgba(138, 43, 226, 0.2));
+}
+
+.projectCardPlaceholder .plus {
+  font-size: 2rem;
+  color: var(--dashboard-subtitle);
+}
+
+.addProjectBtn {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: transparent;
+  color: var(--sidebar-text);
+  cursor: pointer;
+  margin-bottom: 1rem;
+  transition: background 0.2s;
+}
+
+.addProjectBtn:hover {
+  background: rgba(138, 43, 226, 0.08);
+}
+
+/* Portfolio links */
+.portfolioInputs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.portfolioInputs input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  background: var(--card-bg);
+  color: var(--text-primary);
+}
+
+.portfolioInputs input:focus {
+  outline: none;
+  border-color: #8a2be2;
+}
+
+/* ----- Right sidebar ----- */
+.sidebarCard {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.sidebarCardTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--dashboard-title);
+  margin-bottom: 1rem;
+}
+
+.sidebarCardTitle .icon {
+  width: 18px;
+  height: 18px;
+  color: var(--dashboard-subtitle);
+}
+
+.suggestionBox {
+  background: rgba(138, 43, 226, 0.06);
+  border: 1px solid rgba(138, 43, 226, 0.15);
+  border-radius: 8px;
+  padding: 0.875rem;
+  font-size: 0.875rem;
+  color: var(--dashboard-subtitle);
+  margin-bottom: 0.75rem;
+}
+
+.suggestionBox:last-child {
+  margin-bottom: 0;
+}
+
+.traitRow {
+  margin-bottom: 1rem;
+}
+
+.traitRow:last-child {
+  margin-bottom: 0;
+}
+
+.traitLabel {
+  font-size: 0.8125rem;
+  color: var(--dashboard-subtitle);
+  margin-bottom: 0.35rem;
+}
+
+.traitBar {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(138, 43, 226, 0.15);
+  overflow: hidden;
+}
+
+.traitFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #4169e1, #8a2be2);
+  transition: width 0.3s ease;
+}
+
+.saveProfileBtn {
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #8a2be2, #4169e1);
+  color: white;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: opacity 0.2s;
+}
+
+.saveProfileBtn:hover {
+  opacity: 0.92;
+}
+
+.saveProfileBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Messages */
+.message {
+  padding: 0.875rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+.messageSuccess {
+  background: rgba(16, 185, 129, 0.12);
+  color: #065f46;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.messageError {
+  background: rgba(239, 68, 68, 0.1);
+  color: #991b1b;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Form inputs (name, etc.) – used in modal or inline */
+.formGroup {
+  margin-bottom: 1rem;
+}
+
+.formLabel {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--dashboard-title);
+}
+
+.formInput {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  background: var(--card-bg);
+  color: var(--text-primary);
+}
+
+.formInput:focus {
+  outline: none;
+  border-color: #8a2be2;
 }
 
 .formTextarea {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid var(--border-color);
-  border-radius: 0.5rem;
-  font-size: 1rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  font-size: 0.9375rem;
   font-family: inherit;
   resize: vertical;
-  min-height: 100px;
-  transition: border-color 0.2s;
+  min-height: 80px;
+  background: var(--card-bg);
+  color: var(--text-primary);
 }
 
-.formTextarea:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-
-.helpText {
-  display: block;
-  margin-top: 0.5rem;
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-}
-
-.fileUploadSection {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.fileUploadOption {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.fileInput {
-  display: none;
-}
-
-.fileUploadLabel {
-  cursor: pointer;
-}
-
-.fileUploadButton {
-  display: inline-block;
-  padding: 0.75rem 1.5rem;
-  background-color: var(--primary-color);
-  color: white;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.fileUploadButton:hover {
-  background-color: rgba(37, 99, 235, 0.9);
-}
-
-.fileName {
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-}
-
-.orDivider {
-  text-align: center;
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-  position: relative;
-}
-
-.orDivider::before,
-.orDivider::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  width: 45%;
-  height: 1px;
-  background-color: var(--border-color);
-}
-
-.orDivider::before {
-  left: 0;
-}
-
-.orDivider::after {
-  right: 0;
+.detailedCaseStudyForm {
+  margin-top: 1rem;
+  padding: 1.25rem;
+  background: rgba(138, 43, 226, 0.05);
+  border: 1px solid rgba(138, 43, 226, 0.15);
+  border-radius: 10px;
 }
 
 .caseStudiesList {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
   margin-bottom: 1rem;
 }
 
 .caseStudyCard {
   padding: 1rem;
-  border: 1px solid var(--border-color);
-  border-radius: 0.5rem;
-  background-color: rgba(37, 99, 235, 0.02);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  background: var(--card-bg);
   position: relative;
 }
 
@@ -207,66 +558,95 @@
 }
 
 .caseStudyHeader strong {
-  color: var(--text-color);
-  font-size: 1.1rem;
-}
-
-.caseStudyText {
-  color: var(--text-color);
+  font-size: 0.9375rem;
+  color: var(--dashboard-title);
 }
 
 .caseStudyDescription {
-  color: var(--text-secondary);
-  margin: 0.5rem 0;
-  line-height: 1.6;
+  font-size: 0.875rem;
+  color: var(--dashboard-subtitle);
+  line-height: 1.5;
 }
 
-.caseStudyAchievements {
-  color: var(--text-color);
+.addButton {
+  margin-top: 0.5rem;
+}
+
+.tagInput {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+}
+
+.tagInput input {
+  border: none;
+  outline: none;
+  flex: 1;
+  min-width: 120px;
+  font-size: 0.9375rem;
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.helpText {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin-top: 0.35rem;
+}
+
+.fileUploadOption {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.fileInput {
+  display: none;
+}
+
+.fileUploadLabel {
+  cursor: pointer;
   font-size: 0.875rem;
+  color: #8a2be2;
+}
+
+.fileName {
+  font-size: 0.8125rem;
+  color: var(--dashboard-subtitle);
+}
+
+.orDivider {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
   margin: 0.5rem 0;
-  font-style: italic;
+}
+
+.caseStudyText {
+  color: var(--dashboard-title);
+  font-size: 0.9375rem;
+}
+
+.caseStudyAchievements,
+.caseStudyDuration {
+  font-size: 0.8125rem;
+  color: var(--dashboard-subtitle);
+  margin-top: 0.35rem;
 }
 
 .caseStudyTech {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 0.5rem 0;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
 }
 
 .techTag {
-  background-color: rgba(37, 99, 235, 0.1);
-  color: var(--primary-color);
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
+  background: rgba(138, 43, 226, 0.12);
+  color: #8a2be2;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
   font-size: 0.75rem;
-  font-weight: 500;
 }
-
-.caseStudyDuration {
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-  margin: 0.5rem 0 0 0;
-}
-
-.detailedCaseStudyForm {
-  margin-top: 1.5rem;
-  padding: 1.5rem;
-  background-color: rgba(37, 99, 235, 0.05);
-  border: 1px solid rgba(37, 99, 235, 0.1);
-  border-radius: 0.5rem;
-  animation: slideDown 0.2s ease-out;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-

@@ -28,7 +28,10 @@ export interface User {
   skills: string[];
   resume_url: string;
   case_studies: string[];
+  fiverr_gigs?: string[];
   upwork_profile: string;
+  email_notifications?: boolean;
+  proposal_alerts?: boolean;
 }
 
 export interface CreateUserRequest {
@@ -38,7 +41,14 @@ export interface CreateUserRequest {
   skills: string[];
   resume_url: string;
   case_studies: string[];
+  fiverr_gigs: string[];
   upwork_profile: string;
+}
+
+export interface UpdateUserRequest {
+  name?: string;
+  email_notifications?: boolean;
+  proposal_alerts?: boolean;
 }
 
 export interface ProposalResponse {
@@ -63,7 +73,7 @@ export interface GenerateProposalRequest {
 // User API
 export async function createUser(
   userData: CreateUserRequest,
-  firebaseUser: FirebaseUser | null
+  firebaseUser: FirebaseUser | null,
 ): Promise<{ success: boolean; message: string }> {
   const response = await fetch(`${API_BASE_URL}/v1/users`, {
     method: "POST",
@@ -72,8 +82,8 @@ export async function createUser(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || "Failed to create user");
+    const msg = await getApiErrorMessage(response, "Failed to create user");
+    throw new Error(msg);
   }
 
   return response.json();
@@ -81,15 +91,34 @@ export async function createUser(
 
 export async function getUser(
   userId: string,
-  firebaseUser: FirebaseUser | null
+  firebaseUser: FirebaseUser | null,
 ): Promise<User> {
   const response = await fetch(`${API_BASE_URL}/v1/users/${userId}`, {
     headers: await getAuthHeaders(firebaseUser),
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || "Failed to fetch user");
+    const msg = await getApiErrorMessage(response, "Failed to fetch user");
+    throw new Error(msg);
+  }
+
+  return response.json();
+}
+
+export async function updateUser(
+  userId: string,
+  updates: UpdateUserRequest,
+  firebaseUser: FirebaseUser | null,
+): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_BASE_URL}/v1/users/${userId}`, {
+    method: "PATCH",
+    headers: await getAuthHeaders(firebaseUser),
+    body: JSON.stringify(updates),
+  });
+
+  if (!response.ok) {
+    const msg = await getApiErrorMessage(response, "Failed to update user");
+    throw new Error(msg);
   }
 
   return response.json();
@@ -98,7 +127,7 @@ export async function getUser(
 // Proposal API
 export async function generateProposal(
   request: GenerateProposalRequest,
-  firebaseUser: FirebaseUser | null
+  firebaseUser: FirebaseUser | null,
 ): Promise<ProposalResponse> {
   const response = await fetch(`${API_BASE_URL}/v1/proposals/generate`, {
     method: "POST",
@@ -142,18 +171,18 @@ export interface ProposalsResponse {
 export async function getUserProposals(
   userId: string,
   firebaseUser: FirebaseUser | null,
-  limit: number = 10
+  limit: number = 10,
 ): Promise<ProposalsResponse> {
   const response = await fetch(
     `${API_BASE_URL}/v1/proposals/user/${userId}?limit=${limit}`,
     {
       headers: await getAuthHeaders(firebaseUser),
-    }
+    },
   );
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || "Failed to fetch proposals");
+    const msg = await getApiErrorMessage(response, "Failed to fetch proposals");
+    throw new Error(msg);
   }
 
   return response.json();
@@ -161,18 +190,21 @@ export async function getUserProposals(
 
 export async function getProposalCount(
   userId: string,
-  firebaseUser: FirebaseUser | null
+  firebaseUser: FirebaseUser | null,
 ): Promise<{ count: number }> {
   const response = await fetch(
     `${API_BASE_URL}/v1/proposals/user/${userId}/count`,
     {
       headers: await getAuthHeaders(firebaseUser),
-    }
+    },
   );
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || "Failed to get proposal count");
+    const msg = await getApiErrorMessage(
+      response,
+      "Failed to get proposal count",
+    );
+    throw new Error(msg);
   }
 
   return response.json();
@@ -192,13 +224,13 @@ export interface UpdateProposalRequest {
 export async function getProposal(
   proposalId: string,
   userId: string,
-  firebaseUser: FirebaseUser | null
+  firebaseUser: FirebaseUser | null,
 ): Promise<Proposal> {
   const response = await fetch(
     `${API_BASE_URL}/v1/proposals/${proposalId}?user_id=${userId}`,
     {
       headers: await getAuthHeaders(firebaseUser),
-    }
+    },
   );
 
   if (!response.ok) {
@@ -213,7 +245,7 @@ export async function updateProposal(
   proposalId: string,
   userId: string,
   updates: UpdateProposalRequest,
-  firebaseUser: FirebaseUser | null
+  firebaseUser: FirebaseUser | null,
 ): Promise<{ success: boolean; message: string }> {
   const response = await fetch(
     `${API_BASE_URL}/v1/proposals/${proposalId}?user_id=${userId}`,
@@ -221,7 +253,7 @@ export async function updateProposal(
       method: "PATCH",
       headers: await getAuthHeaders(firebaseUser),
       body: JSON.stringify(updates),
-    }
+    },
   );
 
   if (!response.ok) {
@@ -235,14 +267,14 @@ export async function updateProposal(
 export async function deleteProposal(
   proposalId: string,
   userId: string,
-  firebaseUser: FirebaseUser | null
+  firebaseUser: FirebaseUser | null,
 ): Promise<{ success: boolean; message: string }> {
   const response = await fetch(
     `${API_BASE_URL}/v1/proposals/${proposalId}?user_id=${userId}`,
     {
       method: "DELETE",
       headers: await getAuthHeaders(firebaseUser),
-    }
+    },
   );
 
   if (!response.ok) {
@@ -302,7 +334,7 @@ export interface TemplatesResponse {
 export async function createTemplate(
   userId: string,
   templateData: CreateTemplateRequest,
-  firebaseUser: FirebaseUser | null
+  firebaseUser: FirebaseUser | null,
 ): Promise<{ id: string; success: boolean; message: string }> {
   const response = await fetch(
     `${API_BASE_URL}/v1/templates?user_id=${userId}`,
@@ -310,7 +342,7 @@ export async function createTemplate(
       method: "POST",
       headers: await getAuthHeaders(firebaseUser),
       body: JSON.stringify(templateData),
-    }
+    },
   );
 
   if (!response.ok) {
@@ -324,13 +356,13 @@ export async function createTemplate(
 export async function getUserTemplates(
   userId: string,
   firebaseUser: FirebaseUser | null,
-  limit: number = 50
+  limit: number = 50,
 ): Promise<TemplatesResponse> {
   const response = await fetch(
     `${API_BASE_URL}/v1/templates?user_id=${userId}&limit=${limit}`,
     {
       headers: await getAuthHeaders(firebaseUser),
-    }
+    },
   );
 
   if (!response.ok) {
@@ -344,13 +376,13 @@ export async function getUserTemplates(
 export async function getTemplate(
   templateId: string,
   userId: string,
-  firebaseUser: FirebaseUser | null
+  firebaseUser: FirebaseUser | null,
 ): Promise<Template> {
   const response = await fetch(
     `${API_BASE_URL}/v1/templates/${templateId}?user_id=${userId}`,
     {
       headers: await getAuthHeaders(firebaseUser),
-    }
+    },
   );
 
   if (!response.ok) {
@@ -365,7 +397,7 @@ export async function updateTemplate(
   templateId: string,
   userId: string,
   updates: UpdateTemplateRequest,
-  firebaseUser: FirebaseUser | null
+  firebaseUser: FirebaseUser | null,
 ): Promise<{ success: boolean; message: string }> {
   const response = await fetch(
     `${API_BASE_URL}/v1/templates/${templateId}?user_id=${userId}`,
@@ -373,7 +405,7 @@ export async function updateTemplate(
       method: "PATCH",
       headers: await getAuthHeaders(firebaseUser),
       body: JSON.stringify(updates),
-    }
+    },
   );
 
   if (!response.ok) {
@@ -387,14 +419,14 @@ export async function updateTemplate(
 export async function deleteTemplate(
   templateId: string,
   userId: string,
-  firebaseUser: FirebaseUser | null
+  firebaseUser: FirebaseUser | null,
 ): Promise<{ success: boolean; message: string }> {
   const response = await fetch(
     `${API_BASE_URL}/v1/templates/${templateId}?user_id=${userId}`,
     {
       method: "DELETE",
       headers: await getAuthHeaders(firebaseUser),
-    }
+    },
   );
 
   if (!response.ok) {
@@ -427,14 +459,14 @@ export async function updateProposalStatus(
   proposalId: string,
   userId: string,
   status: "draft" | "sent" | "won" | "lost",
-  firebaseUser: FirebaseUser | null
+  firebaseUser: FirebaseUser | null,
 ): Promise<{ success: boolean; message: string }> {
   const response = await fetch(
     `${API_BASE_URL}/v1/proposals/${proposalId}/status?status=${status}&user_id=${userId}`,
     {
       method: "PATCH",
       headers: await getAuthHeaders(firebaseUser),
-    }
+    },
   );
 
   if (!response.ok) {
@@ -447,18 +479,18 @@ export async function updateProposalStatus(
 
 export async function getProposalAnalytics(
   userId: string,
-  firebaseUser: FirebaseUser | null
+  firebaseUser: FirebaseUser | null,
 ): Promise<ProposalAnalytics> {
   const response = await fetch(
     `${API_BASE_URL}/v1/proposals/analytics/${userId}`,
     {
       headers: await getAuthHeaders(firebaseUser),
-    }
+    },
   );
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || "Failed to fetch analytics");
+    const msg = await getApiErrorMessage(response, "Failed to fetch analytics");
+    throw new Error(msg);
   }
 
   return response.json();
@@ -477,7 +509,7 @@ export interface JobPostAnalysis {
 export async function analyzeJobPost(
   userId: string,
   jobPost: string,
-  firebaseUser: FirebaseUser | null
+  firebaseUser: FirebaseUser | null,
 ): Promise<JobPostAnalysis> {
   const response = await fetch(`${API_BASE_URL}/v1/proposals/analyze-job`, {
     method: "POST",
@@ -512,7 +544,7 @@ export async function scoreProposal(
   userId: string,
   proposal: string,
   jobPost: string,
-  firebaseUser: FirebaseUser | null
+  firebaseUser: FirebaseUser | null,
 ): Promise<ProposalScore> {
   const response = await fetch(`${API_BASE_URL}/v1/proposals/score`, {
     method: "POST",

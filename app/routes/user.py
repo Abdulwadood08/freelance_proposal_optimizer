@@ -1,5 +1,5 @@
 """User-related API endpoints."""
-from typing import List, Optional
+from typing import Any, List, Optional
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, EmailStr
 
@@ -16,9 +16,16 @@ class UserCreate(BaseModel):
     email: EmailStr
     skills: List[str]
     resume_url: str
-    case_studies: List[str]
+    case_studies: List[Any]  # string or {title, description, ...}
     fiverr_gigs: List[str]
     upwork_profile: str
+
+
+class UserUpdate(BaseModel):
+    """Schema for partial user update (settings, profile name, etc.)."""
+    name: Optional[str] = None
+    email_notifications: Optional[bool] = None
+    proposal_alerts: Optional[bool] = None
 
 
 class UserResponse(BaseModel):
@@ -110,5 +117,34 @@ async def get_user(user_id: str):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve user: {str(e)}",
+        )
+
+
+@router.patch("/v1/users/{user_id}")
+async def update_user(user_id: str, body: UserUpdate):
+    """
+    Partially update user (name, notification preferences). Merges with existing Firestore doc.
+    """
+    try:
+        firestore_client = get_firestore_client()
+        updates = body.model_dump(exclude_unset=True)
+        if not updates:
+            return {"success": True, "message": "Nothing to update"}
+        firestore_client.update_user(user_id, updates)
+        return {"success": True, "message": "User updated"}
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(e),
+        )
+    except FileNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(e),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update user: {str(e)}",
         )
 

@@ -1,10 +1,10 @@
 import AuthRedirect from "@/components/shared/AuthRedirect/AuthRedirect";
-import Analytics from "@/components/analytics/Analytics";
+import Settings from "@/components/settings/Settings";
 
-export default function AnalyticsPage() {
+export default function SettingsPage() {
   return (
     <AuthRedirect>
-      <Analytics />
+      <Settings />
     </AuthRedirect>
   );
 }

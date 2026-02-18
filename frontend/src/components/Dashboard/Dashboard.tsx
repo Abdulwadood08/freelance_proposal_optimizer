@@ -1,9 +1,16 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
-import { getUser, getUserProposals, getProposalCount, getProposalAnalytics, type User, type ProposalAnalytics } from '@/lib/api';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  getUser,
+  getUserProposals,
+  getProposalCount,
+  getProposalAnalytics,
+  type User,
+  type ProposalAnalytics,
+} from "@/lib/api";
 import {
   AreaChart,
   Area,
@@ -14,11 +21,17 @@ import {
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
-} from 'recharts';
-import styles from './Dashboard.module.css';
+} from "recharts";
+import styles from "./Dashboard.module.css";
 
 const DocIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={styles.kpiIcon}>
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    className={styles.kpiIcon}
+  >
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
     <polyline points="14 2 14 8 20 8" />
     <line x1="16" y1="13" x2="8" y2="13" />
@@ -28,13 +41,25 @@ const DocIcon = () => (
 );
 
 const ChartIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={styles.kpiIcon}>
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    className={styles.kpiIcon}
+  >
     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
   </svg>
 );
 
 const TargetIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={styles.kpiIcon}>
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    className={styles.kpiIcon}
+  >
     <circle cx="12" cy="12" r="10" />
     <circle cx="12" cy="12" r="6" />
     <circle cx="12" cy="12" r="2" />
@@ -42,26 +67,32 @@ const TargetIcon = () => (
 );
 
 const LightningIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={styles.kpiIcon}>
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    className={styles.kpiIcon}
+  >
     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
   </svg>
 );
 
 const activityData = [
-  { month: 'Jan', value: 12, value2: 8 },
-  { month: 'Feb', value: 15, value2: 10 },
-  { month: 'Mar', value: 18, value2: 14 },
-  { month: 'Apr', value: 22, value2: 18 },
-  { month: 'May', value: 28, value2: 24 },
-  { month: 'Jun', value: 36, value2: 30 },
+  { month: "Jan", value: 12, value2: 8 },
+  { month: "Feb", value: 15, value2: 10 },
+  { month: "Mar", value: 18, value2: 14 },
+  { month: "Apr", value: 22, value2: 18 },
+  { month: "May", value: 28, value2: 24 },
+  { month: "Jun", value: 36, value2: 30 },
 ];
 
 const categoryData = [
-  { name: 'Web Dev', value: 85 },
-  { name: 'Mobile', value: 70 },
-  { name: 'UI/UX', value: 90 },
-  { name: 'Backend', value: 78 },
-  { name: 'DevOps', value: 65 },
+  { name: "Web Dev", value: 85 },
+  { name: "Mobile", value: 70 },
+  { name: "UI/UX", value: 90 },
+  { name: "Backend", value: 78 },
+  { name: "DevOps", value: 65 },
 ];
 
 export default function Dashboard() {
@@ -115,7 +146,8 @@ export default function Dashboard() {
     setProfileCompletion(Math.round((completed / total) * 100));
   };
 
-  const winRate = analytics && analytics.sent_count > 0 ? Math.round(analytics.win_rate) : 68;
+  const winRate =
+    analytics && analytics.sent_count > 0 ? Math.round(analytics.win_rate) : 68;
   const profileScore = Math.min(92, profileCompletion + 5);
 
   if (loading) {
@@ -130,7 +162,9 @@ export default function Dashboard() {
     <div className={styles.dashboard}>
       <header className={styles.header}>
         <h1 className={styles.title}>Dashboard</h1>
-        <p className={styles.subtitle}>Welcome back! Here&apos;s your proposal performance overview.</p>
+        <p className={styles.subtitle}>
+          Welcome back! Here&apos;s your proposal performance overview.
+        </p>
       </header>
 
       <div className={styles.kpiGrid}>
@@ -184,7 +218,10 @@ export default function Dashboard() {
           <h2 className={styles.chartTitle}>Proposal Activity</h2>
           <div className={styles.chartWrap}>
             <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={activityData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <AreaChart
+                data={activityData}
+                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+              >
                 <defs>
                   <linearGradient id="areaPurple" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#8a2be2" stopOpacity={0.9} />
@@ -195,19 +232,47 @@ export default function Dashboard() {
                     <stop offset="100%" stopColor="#4169e1" stopOpacity={0.1} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
-                <XAxis dataKey="month" stroke="var(--dashboard-subtitle)" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="var(--dashboard-subtitle)" fontSize={12} tickLine={false} axisLine={false} domain={[0, 40]} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="var(--chart-grid)"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="month"
+                  stroke="var(--dashboard-subtitle)"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  stroke="var(--dashboard-subtitle)"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  domain={[0, 40]}
+                />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: 'var(--card-bg)',
-                    border: '1px solid var(--card-border)',
-                    borderRadius: '8px',
+                    backgroundColor: "var(--card-bg)",
+                    border: "1px solid var(--card-border)",
+                    borderRadius: "8px",
                   }}
-                  labelStyle={{ color: 'var(--dashboard-title)' }}
+                  labelStyle={{ color: "var(--dashboard-title)" }}
                 />
-                <Area type="monotone" dataKey="value2" stroke="#4169e1" fill="url(#areaBlue)" strokeWidth={2} />
-                <Area type="monotone" dataKey="value" stroke="#8a2be2" fill="url(#areaPurple)" strokeWidth={2} />
+                <Area
+                  type="monotone"
+                  dataKey="value2"
+                  stroke="#4169e1"
+                  fill="url(#areaBlue)"
+                  strokeWidth={2}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#8a2be2"
+                  fill="url(#areaPurple)"
+                  strokeWidth={2}
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -217,17 +282,42 @@ export default function Dashboard() {
           <h2 className={styles.chartTitle}>Performance by Category</h2>
           <div className={styles.chartWrap}>
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={categoryData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <BarChart
+                data={categoryData}
+                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+              >
                 <defs>
                   <linearGradient id="barGradient" x1="0" y1="1" x2="0" y2="0">
                     <stop offset="0%" stopColor="#4169e1" />
                     <stop offset="100%" stopColor="#8a2be2" />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
-                <XAxis dataKey="name" stroke="var(--dashboard-subtitle)" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis type="number" domain={[0, 100]} stroke="var(--dashboard-subtitle)" fontSize={12} tickLine={false} axisLine={false} />
-                <Bar dataKey="value" fill="url(#barGradient)" radius={[4, 4, 0, 0]} maxBarSize={36} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="var(--chart-grid)"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="name"
+                  stroke="var(--dashboard-subtitle)"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  type="number"
+                  domain={[0, 100]}
+                  stroke="var(--dashboard-subtitle)"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <Bar
+                  dataKey="value"
+                  fill="url(#barGradient)"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={36}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -237,7 +327,9 @@ export default function Dashboard() {
       <div className={styles.quickSection}>
         <div className={styles.quickCard}>
           <h3 className={styles.quickTitle}>Recent activity</h3>
-          <p className={styles.quickText}>Generate your next proposal or view history.</p>
+          <p className={styles.quickText}>
+            Generate your next proposal or view history.
+          </p>
           <Link href="/generate" className={styles.quickLink}>
             Generate Proposal →
           </Link>
@@ -245,7 +337,9 @@ export default function Dashboard() {
         {!user && (
           <div className={styles.quickCard}>
             <h3 className={styles.quickTitle}>Complete your profile</h3>
-            <p className={styles.quickText}>Add skills and case studies to improve proposal quality.</p>
+            <p className={styles.quickText}>
+              Add skills and case studies to improve proposal quality.
+            </p>
             <Link href="/profile" className={styles.quickLink}>
               My Profile →
             </Link>
