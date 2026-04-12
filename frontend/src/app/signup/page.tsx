@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import Signup from '@/components/auth/Signup/Signup';
+import AuthScreen from '@/components/auth/AuthScreen/AuthScreen';
 
 export default function SignupPage() {
   const { currentUser, loading } = useAuth();
@@ -17,11 +17,13 @@ export default function SignupPage() {
 
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '100vh' 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
+        background: 'linear-gradient(160deg, #1a1b2e 0%, #16213e 50%, #0f3460 100%)',
+        color: '#fff',
       }}>
         <div>Loading...</div>
       </div>
@@ -32,7 +34,7 @@ export default function SignupPage() {
     return null;
   }
 
-  return <Signup />;
+  return <AuthScreen initialMode="signup" />;
 }
 
 

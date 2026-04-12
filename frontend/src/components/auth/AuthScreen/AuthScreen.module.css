@@ -1,7 +1,7 @@
 .wrapper {
   min-height: 100vh;
   width: 100%;
-  background-color: var(--auth-bg);
+  background: linear-gradient(160deg, #1a1b2e 0%, #16213e 35%, #0f3460 70%, #1a1b2e 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -54,7 +54,7 @@
   width: 56px;
   height: 56px;
   border-radius: 14px;
-  background: linear-gradient(135deg, var(--auth-accent-start), var(--auth-accent-end));
+  background: linear-gradient(135deg, #8a2be2, #4169e1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -70,15 +70,15 @@
 .appName {
   font-size: clamp(1.75rem, 5vw, 2.25rem);
   font-weight: 700;
-  color: var(--auth-text);
+  color: #ffffff;
   letter-spacing: -0.02em;
   margin: 0;
 }
 
 .tagline {
   font-size: clamp(0.875rem, 2.5vw, 1rem);
-  color: var(--auth-text-muted);
-  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0.25rem 0 0;
   max-width: 320px;
 }
 
@@ -87,13 +87,13 @@
   z-index: 1;
   width: 100%;
   max-width: 420px;
-  background: var(--auth-card-bg);
+  background: rgba(40, 42, 58, 0.65);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--auth-card-border);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
   padding: 0 0 1.75rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
 }
 
 .tabs {
@@ -109,8 +109,8 @@
   text-align: center;
   font-size: 0.95rem;
   font-weight: 600;
-  color: var(--auth-text-muted);
-  background: var(--auth-tab-inactive-bg);
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.05);
   border: none;
   border-radius: 10px;
   cursor: pointer;
@@ -119,27 +119,26 @@
 }
 
 .tab:hover {
-  color: var(--auth-text);
+  color: #fff;
 }
 
 .tabActive {
-  background: linear-gradient(135deg, var(--auth-accent-start), var(--auth-accent-end));
+  background: linear-gradient(135deg, #8a2be2, #4169e1);
   color: white;
 }
 
-.form,
-.error {
+.form {
   padding: 0 1.5rem;
 }
 
 .error {
   margin: 0 1.5rem 1rem;
   padding: 0.75rem 1rem;
-  background: rgba(239, 68, 68, 0.15);
-  color: var(--error-color);
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
   border-radius: 10px;
   font-size: 0.875rem;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  border: 1px solid rgba(239, 68, 68, 0.4);
 }
 
 .form {
@@ -155,7 +154,7 @@
   margin-bottom: 0.5rem;
   font-size: 0.9rem;
   font-weight: 500;
-  color: var(--auth-text);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .inputWrapper {
@@ -169,7 +168,7 @@
   left: 1rem;
   width: 20px;
   height: 20px;
-  color: var(--auth-text-muted);
+  color: rgba(255, 255, 255, 0.5);
   pointer-events: none;
 }
 
@@ -177,15 +176,15 @@
   width: 100%;
   padding: 0.875rem 1rem 0.875rem 2.75rem;
   font-size: 1rem;
-  color: var(--auth-text);
-  background: var(--auth-input-bg);
-  border: 1px solid var(--auth-input-border);
+  color: #f1f5f9;
+  background: rgba(51, 53, 72, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.25);
   border-radius: 12px;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .input::placeholder {
-  color: var(--auth-text-muted);
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .input:focus {
@@ -220,7 +219,7 @@
   font-size: 1rem;
   font-weight: 600;
   color: white;
-  background: linear-gradient(135deg, var(--auth-accent-start), var(--auth-accent-end));
+  background: linear-gradient(135deg, #8a2be2, #4169e1);
   border: none;
   border-radius: 12px;
   cursor: pointer;
@@ -242,7 +241,7 @@
   margin: 1.5rem 1.5rem 1rem;
   text-align: center;
   position: relative;
-  color: var(--auth-text-muted);
+  color: rgba(255, 255, 255, 0.5);
   font-size: 0.8rem;
 }
 
@@ -253,7 +252,7 @@
   top: 50%;
   width: 42%;
   height: 1px;
-  background: var(--auth-input-border);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .divider::before {
@@ -274,17 +273,17 @@
   padding: 0.75rem 1rem;
   font-size: 0.95rem;
   font-weight: 500;
-  color: var(--auth-text);
-  background: var(--auth-input-bg);
-  border: 1px solid var(--auth-input-border);
+  color: #f1f5f9;
+  background: rgba(51, 53, 72, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.25);
   border-radius: 12px;
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
 }
 
 .googleButton:hover:not(:disabled) {
-  border-color: var(--auth-accent-start);
-  background: var(--auth-tab-inactive-bg);
+  border-color: rgba(138, 43, 226, 0.5);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .googleButton:disabled {
@@ -303,18 +302,18 @@
   padding: 0 1rem;
   text-align: center;
   font-size: clamp(0.75rem, 2vw, 0.8rem);
-  color: var(--auth-text-muted);
+  color: rgba(255, 255, 255, 0.6);
   max-width: 380px;
 }
 
 .legalLink {
-  color: var(--auth-text-muted);
+  color: rgba(255, 255, 255, 0.75);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
 .legalLink:hover {
-  color: var(--auth-accent-start);
+  color: #a78bfa;
 }
 
 .helpButton {

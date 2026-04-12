@@ -40,6 +40,7 @@ class ProposalResponse(BaseModel):
     proposal: str
     cover_letter: str
     tone_variations: dict
+    job_post: Optional[str] = None  # Required for scoring on the frontend
 
 
 class ProposalUpdateRequest(BaseModel):
