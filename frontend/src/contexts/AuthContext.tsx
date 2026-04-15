@@ -6,7 +6,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
-  onAuthStateChanged,
+  onIdTokenChanged,
   sendPasswordResetEmail,
   GoogleAuthProvider,
   signInWithPopup,
@@ -40,6 +40,7 @@ interface AuthProviderProps {
 
 const REMEMBER_ME_KEY = 'rememberMe';
 const REMEMBERED_EMAIL_KEY = 'rememberedEmail';
+const EXTENSION_TOKEN_KEY = 'fpo_extension_token';
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -87,6 +88,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(REMEMBER_ME_KEY);
       localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+      localStorage.removeItem(EXTENSION_TOKEN_KEY);
+      sessionStorage.removeItem(EXTENSION_TOKEN_KEY);
     }
     setIsRemembered(false);
     return signOut(auth);
@@ -97,8 +100,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onIdTokenChanged(auth, async (user) => {
       setCurrentUser(user);
+
+      // Keep a dedicated token key for the browser extension.
+      if (typeof window !== 'undefined') {
+        if (user) {
+          try {
+            const token = await user.getIdToken();
+            localStorage.setItem(EXTENSION_TOKEN_KEY, token);
+            sessionStorage.setItem(EXTENSION_TOKEN_KEY, token);
+          } catch {
+            localStorage.removeItem(EXTENSION_TOKEN_KEY);
+            sessionStorage.removeItem(EXTENSION_TOKEN_KEY);
+          }
+        } else {
+          localStorage.removeItem(EXTENSION_TOKEN_KEY);
+          sessionStorage.removeItem(EXTENSION_TOKEN_KEY);
+        }
+      }
+
       setLoading(false);
     });
 

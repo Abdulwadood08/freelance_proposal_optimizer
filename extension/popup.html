@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Proposal Optimizer</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Proposal Optimizer</h1>
+      <p class="subtitle">Extract Upwork jobs and generate AI proposals.</p>
+
+      <label class="label" for="tone">Tone</label>
+      <select id="tone">
+        <option value="professional">Professional</option>
+        <option value="friendly">Friendly</option>
+        <option value="confident">Confident</option>
+        <option value="balanced">Balanced</option>
+      </select>
+
+      <label class="label" for="backendBaseUrl">Backend URL</label>
+      <input id="backendBaseUrl" type="text" value="http://localhost:8000" />
+
+      <section class="card">
+        <h2>Auth</h2>
+        <p class="hint">Open your app tab and click "Read Token" there once.</p>
+        <div class="row">
+          <button id="readTokenBtn">Read Token</button>
+          <button id="clearTokenBtn" class="secondary">Clear Token</button>
+        </div>
+        <p id="tokenStatus" class="status">Token: not set</p>
+      </section>
+
+      <section class="card">
+        <h2>Job Data</h2>
+        <button id="readJobBtn">Read Job</button>
+        <div id="jobPreview" class="preview">
+          <p class="muted">No job loaded yet.</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Proposal</h2>
+        <button id="generateBtn">Generate Proposal</button>
+        <textarea id="proposalOutput" rows="10" placeholder="Generated proposal will appear here..."></textarea>
+        <button id="copyBtn" class="secondary">Copy</button>
+      </section>
+
+      <p id="message" class="status"></p>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+  </html>

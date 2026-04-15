@@ -1,10 +1,12 @@
 """Proposal-related API endpoints."""
 import logging
 
-from fastapi import APIRouter, HTTPException, status, Query
+from fastapi import APIRouter, HTTPException, status, Query, Header
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 from typing import List, Optional
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token as google_id_token
 
 from app.services.firestore_client import get_firestore_client
 
@@ -80,6 +82,90 @@ class TemplateUpdateRequest(BaseModel):
     proposal: Optional[str] = None
     cover_letter: Optional[str] = None
     tone_variations: Optional[dict] = None
+
+
+class PluginGenerateProposalRequest(BaseModel):
+    """Schema for extension plugin proposal generation."""
+    job_title: str
+    job_description: str
+    tone: Optional[str] = "professional"
+
+
+class PluginGenerateProposalResponse(BaseModel):
+    """Schema for extension plugin proposal generation response."""
+    proposal: str
+
+
+class PluginAnalyzeJobRequest(BaseModel):
+    """Schema for full extension assistant analysis."""
+    job_title: str
+    job_description: str
+    job_url: Optional[str] = None
+    tone: Optional[str] = "professional"
+
+
+class PluginVariation(BaseModel):
+    """Proposal variation payload."""
+    tone: str
+    proposal: str
+
+
+class PluginAnalyzeJobResponse(BaseModel):
+    """Schema for full extension assistant analysis response."""
+    fit_score: int
+    keywords: List[str]
+    strategy: str
+    proposal: str
+    variations: List[PluginVariation]
+
+
+def _get_user_id_from_bearer_token(authorization: Optional[str]) -> str:
+    """
+    Parse and verify Firebase ID token from Authorization header.
+
+    Returns:
+        Firebase user id (uid / sub)
+    """
+    if not authorization:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing Authorization header.",
+        )
+
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Authorization header format. Expected Bearer token.",
+        )
+
+    token = authorization.split(" ", 1)[1].strip()
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing Bearer token.",
+        )
+
+    try:
+        decoded = google_id_token.verify_firebase_token(token, google_requests.Request())
+        if not decoded:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid Firebase token.",
+            )
+        user_id = decoded.get("user_id") or decoded.get("uid") or decoded.get("sub")
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not extract user id from token.",
+            )
+        return user_id
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Token verification failed: {str(e)}",
+        ) from e
 
 
 @router.post("/v1/proposals/generate", response_model=ProposalResponse, status_code=status.HTTP_201_CREATED)
@@ -171,6 +257,186 @@ async def generate_proposal(request: ProposalGenerateRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate proposal: {str(e)}"
+        )
+
+
+@router.post("/plugin/generate-proposal", response_model=PluginGenerateProposalResponse)
+async def generate_proposal_from_plugin(
+    request: PluginGenerateProposalRequest,
+    authorization: Optional[str] = Header(default=None, alias="Authorization"),
+):
+    """
+    Plugin endpoint: generate proposal from Upwork job data.
+
+    Steps:
+    1) Get user_id from Firebase token
+    2) Load user profile from Firestore
+    3) Build prompt input (job title + description)
+    4) Reuse OpenAI proposal generation logic
+    5) Return proposal text
+    """
+    try:
+        user_id = _get_user_id_from_bearer_token(authorization)
+
+        firestore_client = _get_firestore()
+        user_data = firestore_client.get_user(user_id)
+        if not user_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User profile not found. Please complete your profile first.",
+            )
+
+        job_post = (
+            f"Job Title: {request.job_title.strip()}\n\n"
+            f"Job Description:\n{request.job_description.strip()}"
+        )
+
+        user_skills = user_data.get("skills", [])
+        case_studies = user_data.get("case_studies", [])
+        winning_patterns = firestore_client.get_winning_patterns(user_id)
+
+        openai_client = get_openai_client()
+        proposal_result = openai_client.generate_proposal(
+            user_skills=user_skills,
+            case_studies=case_studies,
+            job_post=job_post,
+            preferred_tone=request.tone or "professional",
+            proposal_length="medium",
+            winning_patterns=winning_patterns if winning_patterns else None,
+        )
+
+        proposal_text = proposal_result.get("proposal", "").strip()
+        if not proposal_text:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="OpenAI response did not contain a proposal.",
+            )
+
+        return {"proposal": proposal_text}
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate plugin proposal: {str(e)}",
+        )
+
+
+@router.post("/plugin/analyze-job", response_model=PluginAnalyzeJobResponse)
+async def analyze_job_from_plugin(
+    request: PluginAnalyzeJobRequest,
+    authorization: Optional[str] = Header(default=None, alias="Authorization"),
+):
+    """
+    Plugin endpoint: analyze job + generate strategy + proposal for Upwork pages.
+    """
+    try:
+        user_id = _get_user_id_from_bearer_token(authorization)
+        firestore_client = _get_firestore()
+
+        user_data = firestore_client.get_user(user_id)
+        if not user_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User profile not found. Please complete your profile first.",
+            )
+
+        user_skills = user_data.get("skills", [])
+        case_studies = user_data.get("case_studies", [])
+        winning_patterns = firestore_client.get_winning_patterns(user_id)
+
+        job_post = (
+            f"Job Title: {request.job_title.strip()}\n\n"
+            f"Job Description:\n{request.job_description.strip()}\n\n"
+            f"Job URL: {(request.job_url or '').strip()}"
+        )
+
+        openai_client = get_openai_client()
+
+        analysis_result = openai_client.analyze_job_post(
+            job_post=job_post,
+            user_skills=user_skills,
+            user_case_studies=case_studies,
+        )
+
+        proposal_result = openai_client.generate_proposal(
+            user_skills=user_skills,
+            case_studies=case_studies,
+            job_post=job_post,
+            preferred_tone=request.tone or "professional",
+            proposal_length="medium",
+            winning_patterns=winning_patterns if winning_patterns else None,
+        )
+
+        relevant_skills = analysis_result.get("relevant_skills", []) or []
+        missing_skills = analysis_result.get("missing_skills", []) or []
+        key_requirements = analysis_result.get("key_requirements", []) or []
+        suggestions = analysis_result.get("suggestions", []) or []
+        profile_gaps = analysis_result.get("profile_gaps", []) or []
+
+        match_ratio = (
+            len(relevant_skills) / (len(relevant_skills) + len(missing_skills))
+            if (len(relevant_skills) + len(missing_skills)) > 0
+            else 0.6
+        )
+        fit_score = int(max(35, min(95, round(match_ratio * 100))))
+
+        keywords = key_requirements + relevant_skills
+        deduped_keywords = list(dict.fromkeys([str(k).strip() for k in keywords if str(k).strip()]))
+
+        strategy_parts = []
+        if analysis_result.get("job_summary"):
+            strategy_parts.append(f"Job Summary: {analysis_result['job_summary']}")
+        if relevant_skills:
+            strategy_parts.append(
+                "Lead with these matching skills: " + ", ".join(relevant_skills[:5])
+            )
+        if suggestions:
+            strategy_parts.append("Execution strategy: " + " ".join(suggestions[:2]))
+        if profile_gaps:
+            strategy_parts.append(
+                "Profile gaps to address briefly in proposal: " + ", ".join(profile_gaps[:3])
+            )
+        strategy = "\n\n".join(strategy_parts) if strategy_parts else "Highlight relevance and provide a strong call-to-action."
+
+        tone_variations = proposal_result.get("tone_variations", {}) or {}
+        variations = []
+        for tone_name in ["professional", "friendly", "confident"]:
+            if tone_variations.get(tone_name):
+                variations.append(
+                    {"tone": tone_name, "proposal": tone_variations[tone_name]}
+                )
+
+        proposal_text = (proposal_result.get("proposal") or "").strip()
+        if not proposal_text:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="OpenAI response did not contain a proposal.",
+            )
+
+        return {
+            "fit_score": fit_score,
+            "keywords": deduped_keywords[:12],
+            "strategy": strategy,
+            "proposal": proposal_text,
+            "variations": variations,
+        }
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to analyze plugin job: {str(e)}",
         )
 
 
