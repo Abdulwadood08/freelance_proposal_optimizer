@@ -232,7 +232,7 @@ function setupInPageAssistant() {
 
   const panel = document.createElement("aside");
   panel.id = "fpoPanel";
-  panel.className = "fpo-panel";
+  panel.className = "fpo-panel fpo-root";
   panel.innerHTML = createPanelTemplate();
   document.body.appendChild(panel);
 

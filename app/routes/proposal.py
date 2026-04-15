@@ -93,6 +93,7 @@ class PluginGenerateProposalRequest(BaseModel):
 
 class PluginGenerateProposalResponse(BaseModel):
     """Schema for extension plugin proposal generation response."""
+    id: Optional[str] = None
     proposal: str
 
 
@@ -112,6 +113,7 @@ class PluginVariation(BaseModel):
 
 class PluginAnalyzeJobResponse(BaseModel):
     """Schema for full extension assistant analysis response."""
+    id: Optional[str] = None
     fit_score: int
     keywords: List[str]
     strategy: str
@@ -312,7 +314,19 @@ async def generate_proposal_from_plugin(
                 detail="OpenAI response did not contain a proposal.",
             )
 
-        return {"proposal": proposal_text}
+        proposal_data = {
+            "proposal": proposal_result.get("proposal", ""),
+            "cover_letter": proposal_result.get("cover_letter", ""),
+            "tone_variations": proposal_result.get("tone_variations", {}),
+            "job_post": job_post,
+            "preferred_tone": request.tone or "professional",
+            "proposal_length": "medium",
+            "source": "plugin_generate",
+            "status": "draft",
+        }
+        proposal_id = firestore_client.save_proposal(user_id=user_id, proposal_data=proposal_data)
+
+        return {"id": proposal_id, "proposal": proposal_text}
     except HTTPException:
         raise
     except ValueError as e:
@@ -419,7 +433,23 @@ async def analyze_job_from_plugin(
                 detail="OpenAI response did not contain a proposal.",
             )
 
+        proposal_data = {
+            "proposal": proposal_text,
+            "cover_letter": proposal_result.get("cover_letter", ""),
+            "tone_variations": tone_variations,
+            "job_post": job_post,
+            "preferred_tone": request.tone or "professional",
+            "proposal_length": "medium",
+            "source": "plugin_analyze",
+            "status": "draft",
+            "fit_score": fit_score,
+            "analysis_keywords": deduped_keywords[:12],
+            "analysis_strategy": strategy,
+        }
+        proposal_id = firestore_client.save_proposal(user_id=user_id, proposal_data=proposal_data)
+
         return {
+            "id": proposal_id,
             "fit_score": fit_score,
             "keywords": deduped_keywords[:12],
             "strategy": strategy,

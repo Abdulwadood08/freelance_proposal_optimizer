@@ -48,11 +48,14 @@
   --dashboard-subtitle: #64748b;
   --kpi-change-positive: #10b981;
   --chart-grid: #e2e8f0;
+  --button-text-on-accent: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --border-color: rgba(255, 255, 255, 0.14);
     --bg-color: #252830;
     --bg-secondary: #1f2028;
     --auth-bg: #1e1f30;
@@ -92,6 +95,24 @@ body {
   background-color: var(--bg-secondary);
   color: var(--text-primary);
   line-height: 1.6;
+}
+
+/* Requested typography change: keep text regular-weight globally */
+body,
+body * {
+  font-weight: 400 !important;
+}
+
+/* Ensure accent buttons keep high-contrast white text */
+button,
+.btn,
+[role="button"] {
+  font-weight: 400 !important;
+}
+
+.btn.primary,
+button[type="submit"] {
+  color: var(--button-text-on-accent) !important;
 }
 a {
   color: inherit;

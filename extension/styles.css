@@ -2,12 +2,41 @@
   box-sizing: border-box;
 }
 
+:root {
+  --ext-bg: #f8fafc;
+  --ext-surface: #ffffff;
+  --ext-border: #dbe5f2;
+  --ext-text: #0f172a;
+  --ext-muted: #64748b;
+  --ext-input-bg: #ffffff;
+  --ext-input-border: #cbd5e1;
+  --ext-accent-start: #8a2be2;
+  --ext-accent-end: #4169e1;
+  --ext-accent-text: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ext-bg: #111827;
+    --ext-surface: #0f172a;
+    --ext-border: #374151;
+    --ext-text: #f9fafb;
+    --ext-muted: #9ca3af;
+    --ext-input-bg: #1f2937;
+    --ext-input-border: #374151;
+    --ext-accent-start: #8a2be2;
+    --ext-accent-end: #4169e1;
+    --ext-accent-text: #ffffff;
+  }
+}
+
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: #111827;
-  color: #f9fafb;
+  background: var(--ext-bg);
+  color: var(--ext-text);
   width: 380px;
+  font-weight: 400;
 }
 
 .container {
@@ -26,7 +55,7 @@ h2 {
 
 .subtitle {
   margin: 0 0 12px;
-  color: #9ca3af;
+  color: var(--ext-muted);
   font-size: 12px;
 }
 
@@ -34,7 +63,7 @@ h2 {
   display: block;
   margin: 10px 0 6px;
   font-size: 12px;
-  color: #d1d5db;
+  color: var(--ext-muted);
 }
 
 input,
@@ -43,11 +72,12 @@ textarea,
 button {
   width: 100%;
   border-radius: 8px;
-  border: 1px solid #374151;
-  background: #1f2937;
-  color: #f9fafb;
+  border: 1px solid var(--ext-input-border);
+  background: var(--ext-input-bg);
+  color: var(--ext-text);
   padding: 9px 10px;
   font-size: 13px;
+  font-weight: 400;
 }
 
 textarea {
@@ -59,13 +89,15 @@ textarea {
 button {
   cursor: pointer;
   border: none;
-  background: linear-gradient(135deg, #8a2be2, #4169e1);
-  font-weight: 600;
+  background: linear-gradient(135deg, var(--ext-accent-start), var(--ext-accent-end));
+  color: var(--ext-accent-text);
+  font-weight: 400;
   margin-top: 8px;
 }
 
 button.secondary {
-  background: #374151;
+  background: var(--ext-input-border);
+  color: var(--ext-text);
 }
 
 button:disabled {
@@ -76,9 +108,9 @@ button:disabled {
 .card {
   margin-top: 12px;
   padding: 10px;
-  border: 1px solid #374151;
+  border: 1px solid var(--ext-border);
   border-radius: 10px;
-  background: #111827;
+  background: var(--ext-surface);
 }
 
 .row {
@@ -89,8 +121,8 @@ button:disabled {
 
 .preview {
   margin-top: 8px;
-  background: #1f2937;
-  border: 1px solid #374151;
+  background: var(--ext-input-bg);
+  border: 1px solid var(--ext-border);
   border-radius: 8px;
   padding: 8px;
   max-height: 120px;
@@ -102,19 +134,19 @@ button:disabled {
 .status {
   margin: 6px 0 0;
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--ext-muted);
 }
 
 .job-title {
   margin: 0 0 4px;
   font-size: 13px;
-  font-weight: 700;
-  color: #f9fafb;
+  font-weight: 400;
+  color: var(--ext-text);
 }
 
 .job-description {
   margin: 0;
   font-size: 12px;
-  color: #d1d5db;
+  color: var(--ext-muted);
   white-space: pre-wrap;
 }
