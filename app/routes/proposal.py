@@ -22,7 +22,11 @@ def _get_firestore():
         ) from e
 
 
-from app.services.openai_client import get_openai_client
+from app.services.llm_router import (
+    get_analysis_client,
+    generate_proposal_with_routing,
+    get_scoring_client,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -199,9 +203,8 @@ async def generate_proposal(request: ProposalGenerateRequest):
         # Get winning patterns for personalization
         winning_patterns = firestore_client.get_winning_patterns(request.user_id)
         
-        # 2. Call OpenAI GPT-4.1-mini API to generate proposal
-        openai_client = get_openai_client()
-        proposal_result = openai_client.generate_proposal(
+        # 2. Call configured generation provider (HuggingFace/OpenAI)
+        proposal_result = generate_proposal_with_routing(
             user_skills=user_skills,
             case_studies=case_studies,
             job_post=request.job_post,
@@ -251,6 +254,11 @@ async def generate_proposal(request: ProposalGenerateRequest):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="OpenAI API key is not configured. Please set OPENAI_API_KEY environment variable."
             )
+        if "HF_MODEL_ID" in error_msg:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="HuggingFace model is not configured. Please set HF_MODEL_ID environment variable."
+            )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=error_msg
@@ -297,8 +305,7 @@ async def generate_proposal_from_plugin(
         case_studies = user_data.get("case_studies", [])
         winning_patterns = firestore_client.get_winning_patterns(user_id)
 
-        openai_client = get_openai_client()
-        proposal_result = openai_client.generate_proposal(
+        proposal_result = generate_proposal_with_routing(
             user_skills=user_skills,
             case_studies=case_studies,
             job_post=job_post,
@@ -370,15 +377,15 @@ async def analyze_job_from_plugin(
             f"Job URL: {(request.job_url or '').strip()}"
         )
 
-        openai_client = get_openai_client()
+        analysis_client = get_analysis_client()
 
-        analysis_result = openai_client.analyze_job_post(
+        analysis_result = analysis_client.analyze_job_post(
             job_post=job_post,
             user_skills=user_skills,
             user_case_studies=case_studies,
         )
 
-        proposal_result = openai_client.generate_proposal(
+        proposal_result = generate_proposal_with_routing(
             user_skills=user_skills,
             case_studies=case_studies,
             job_post=job_post,
@@ -759,9 +766,9 @@ async def analyze_job_post(request: JobPostAnalysisRequest):
         user_skills = user_data.get("skills", [])
         case_studies = user_data.get("case_studies", [])
         
-        # 2. Call OpenAI to analyze job post
-        openai_client = get_openai_client()
-        analysis_result = openai_client.analyze_job_post(
+        # 2. Call configured analysis provider (default OpenAI)
+        analysis_client = get_analysis_client()
+        analysis_result = analysis_client.analyze_job_post(
             job_post=request.job_post,
             user_skills=user_skills,
             user_case_studies=case_studies
@@ -813,9 +820,9 @@ async def score_proposal(request: ProposalScoringRequest):
         
         user_skills = user_data.get("skills", [])
         
-        # 2. Call OpenAI to score the proposal
-        openai_client = get_openai_client()
-        scoring_result = openai_client.score_proposal_quality(
+        # 2. Call configured scoring provider (default OpenAI)
+        scoring_client = get_scoring_client()
+        scoring_result = scoring_client.score_proposal_quality(
             proposal=request.proposal,
             job_post=request.job_post,
             user_skills=user_skills

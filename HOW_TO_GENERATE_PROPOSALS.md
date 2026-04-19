@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Proposal Optimizer uses AI (OpenAI GPT-4o-mini) to generate tailored Upwork proposals based on your profile and the job posting. Here's how it works:
+The Proposal Optimizer uses AI to generate tailored Upwork proposals based on your profile and the job posting. In the hybrid setup, proposal generation runs on your fine-tuned HuggingFace model while analysis and scoring remain on OpenAI. Here's how it works:
 
 ## Step-by-Step Process
 
@@ -62,7 +62,8 @@ Once generated, you'll see a proposal card with multiple tabs:
 3. Backend fetches your profile from Firestore
    - Gets your skills and case studies
    ↓
-4. Backend calls OpenAI GPT-4o-mini API
+4. Backend calls configured generation model provider
+   - Default: your fine-tuned HuggingFace model
    - Sends: your skills, case studies, and job post
    - AI generates tailored proposal
    ↓
@@ -162,7 +163,9 @@ Then it creates:
 
 ### Backend Requirements:
 
-- **OpenAI API Key**: Must be set in backend environment
+- **HuggingFace Model ID**: Must be set for proposal generation
+- **OpenAI API Key**: Required for analysis/scoring features
+- **Generation fallback flag**: `PROPOSAL_GENERATION_FALLBACK_TO_OPENAI=true` for automatic OpenAI fallback if HF is unavailable
 - **Firebase/Firestore**: Stores user profiles and proposals
 - **FastAPI Backend**: Handles API requests
 
