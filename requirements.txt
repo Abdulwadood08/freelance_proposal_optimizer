@@ -4,4 +4,5 @@ google-cloud-firestore>=2.13.1
 pydantic[email]>=2.9.0
 openai>=1.0.0
 python-dotenv>=1.0.0
+certifi
 

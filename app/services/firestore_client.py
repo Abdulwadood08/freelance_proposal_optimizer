@@ -4,6 +4,7 @@ import json
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from google.cloud import firestore
+from google.cloud.firestore_v1.base_query import FieldFilter
 from google.oauth2 import service_account
 
 
@@ -144,7 +145,9 @@ class FirestoreClient:
         """
         proposals_ref = self.db.collection("proposals")
         fetch_limit = min(500, max(limit, 50))  # fetch enough to sort, cap at 500
-        query = proposals_ref.where("user_id", "==", user_id).limit(fetch_limit)
+        query = proposals_ref.where(
+            filter=FieldFilter("user_id", "==", user_id)
+        ).limit(fetch_limit)
         
         proposals = []
         for doc in query.stream():
@@ -171,7 +174,9 @@ class FirestoreClient:
             Total number of proposals
         """
         proposals_ref = self.db.collection("proposals")
-        query = proposals_ref.where("user_id", "==", user_id)
+        query = proposals_ref.where(
+            filter=FieldFilter("user_id", "==", user_id)
+        )
         return len(list(query.stream()))
     
     def get_proposal(self, proposal_id: str) -> Optional[Dict[str, Any]]:
@@ -325,7 +330,9 @@ class FirestoreClient:
             Dictionary with analytics data
         """
         proposals_ref = self.db.collection("proposals")
-        query = proposals_ref.where("user_id", "==", user_id)
+        query = proposals_ref.where(
+            filter=FieldFilter("user_id", "==", user_id)
+        )
         
         proposals = []
         for doc in query.stream():
@@ -382,7 +389,11 @@ class FirestoreClient:
             Dictionary with winning patterns
         """
         proposals_ref = self.db.collection("proposals")
-        query = proposals_ref.where("user_id", "==", user_id).where("status", "==", "won")
+        query = proposals_ref.where(
+            filter=FieldFilter("user_id", "==", user_id)
+        ).where(
+            filter=FieldFilter("status", "==", "won")
+        )
         
         winning_proposals = []
         for doc in query.stream():
@@ -457,7 +468,9 @@ class FirestoreClient:
         """
         templates_ref = self.db.collection("templates")
         fetch_limit = min(200, max(limit, 50))
-        query = templates_ref.where("user_id", "==", user_id).limit(fetch_limit)
+        query = templates_ref.where(
+            filter=FieldFilter("user_id", "==", user_id)
+        ).limit(fetch_limit)
         
         templates = []
         for doc in query.stream():
