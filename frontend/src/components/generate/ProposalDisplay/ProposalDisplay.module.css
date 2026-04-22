@@ -442,3 +442,47 @@
   font-weight: 600;
   font-size: 1rem;
 }
+
+.feedbackRow {
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  background-color: var(--bg-color);
+}
+
+.feedbackTitle {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.95rem;
+  color: var(--text-color);
+}
+
+.feedbackButtons {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.feedbackButton {
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-color);
+  border-radius: 8px;
+  padding: 0.5rem 0.875rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.feedbackButton:hover:not(:disabled) {
+  border-color: var(--primary-color);
+  background-color: rgba(37, 99, 235, 0.08);
+}
+
+.feedbackButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.feedbackButtonActive {
+  border-color: var(--primary-color);
+  background-color: rgba(37, 99, 235, 0.15);
+  font-weight: 600;
+}

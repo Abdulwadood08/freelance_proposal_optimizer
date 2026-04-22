@@ -253,6 +253,73 @@ Return ONLY valid JSON, no additional text or markdown formatting."""
         except Exception as e:
             raise ValueError(f"Failed to score proposal: {str(e)}")
 
+    def improve_proposal_once(
+        self,
+        proposal: str,
+        job_post: str,
+        user_skills: list,
+        weaknesses: Optional[list] = None,
+        suggestions: Optional[list] = None,
+        preferred_tone: str = "professional",
+        target_length: str = "medium",
+    ) -> str:
+        """
+        Rewrite proposal once using scoring feedback.
+        Returns improved plain-text proposal.
+        """
+        skills_text = ", ".join(user_skills) if user_skills else "None"
+        weakness_lines = "\n".join(f"- {w}" for w in (weaknesses or [])[:3]) or "- Not provided"
+        suggestion_lines = "\n".join(f"- {s}" for s in (suggestions or [])[:3]) or "- Not provided"
+        length_hint = {
+            "short": "100-150 words",
+            "medium": "150-250 words",
+            "long": "250-350 words",
+        }.get(target_length, "150-250 words")
+
+        prompt = f"""Improve the following Upwork proposal using the provided critique.
+
+JOB POST:
+{job_post}
+
+FREELANCER SKILLS:
+{skills_text}
+
+CURRENT PROPOSAL:
+{proposal}
+
+KNOWN WEAKNESSES:
+{weakness_lines}
+
+SUGGESTED IMPROVEMENTS:
+{suggestion_lines}
+
+Rewrite requirements:
+- Keep the tone {preferred_tone}
+- Keep length around {length_hint}
+- Preserve truthful claims only
+- Strengthen hook, relevance, and call-to-action
+- Return ONLY the improved proposal text
+"""
+
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are an expert freelance proposal editor. Return only plain proposal text.",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.4,
+            )
+            improved = (response.choices[0].message.content or "").strip()
+            if not improved:
+                raise ValueError("Improvement model returned empty text.")
+            return improved
+        except Exception as e:
+            raise ValueError(f"Failed to improve proposal: {str(e)}")
+
 
 # Global instance
 _openai_client = None

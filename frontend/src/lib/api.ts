@@ -143,6 +143,34 @@ export async function generateProposal(
   return response.json();
 }
 
+export interface ImprovedProposalResponse extends ProposalResponse {
+  original_proposal?: string;
+  improved_proposal_candidate?: string;
+  score_before?: number;
+  score_after?: number;
+  improvement_attempted?: boolean;
+  improvement_applied?: boolean;
+  improvement_reason?: string;
+}
+
+export async function generateImprovedProposal(
+  request: GenerateProposalRequest,
+  firebaseUser: FirebaseUser | null,
+): Promise<ImprovedProposalResponse> {
+  const response = await fetch(`${API_BASE_URL}/v1/proposals/generate-improved`, {
+    method: "POST",
+    headers: await getAuthHeaders(firebaseUser),
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to generate improved proposal");
+  }
+
+  return response.json();
+}
+
 export interface Proposal {
   id: string;
   user_id: string;
@@ -453,6 +481,23 @@ export interface ProposalAnalytics {
   lost_count: number;
   tone_stats: Record<string, number>;
   length_stats: Record<string, number>;
+  avg_score?: number;
+  feedback_positive_rate?: number;
+  total_feedback?: number;
+  recent_activity?: Array<{
+    proposal_id?: string;
+    status: string;
+    created_at?: string;
+    source?: string;
+    fit_score?: number;
+  }>;
+  top_performing_proposal?: {
+    proposal_id?: string;
+    status: string;
+    fit_score?: number;
+    created_at?: string;
+    excerpt?: string;
+  } | null;
 }
 
 export async function updateProposalStatus(
@@ -555,6 +600,47 @@ export async function scoreProposal(
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.detail || "Failed to score proposal");
+  }
+
+  return response.json();
+}
+
+export interface PluginAnalyzeResult {
+  id?: string;
+  fit_score: number;
+  breakdown?: {
+    skills: number;
+    experience: number;
+    requirements: number;
+    proposal: number;
+  };
+  keywords: string[];
+  strategy: string;
+  proposal: string;
+  variations: Array<{ tone: string; proposal: string }>;
+}
+
+export async function submitProposalFeedback(
+  userId: string,
+  proposalId: string,
+  jobId: string,
+  rating: 1 | -1,
+  firebaseUser: FirebaseUser | null,
+): Promise<{ success: boolean; feedback_id: string }> {
+  const response = await fetch(`${API_BASE_URL}/v1/feedback`, {
+    method: "POST",
+    headers: await getAuthHeaders(firebaseUser),
+    body: JSON.stringify({
+      user_id: userId,
+      proposal_id: proposalId,
+      job_id: jobId,
+      rating,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to submit feedback");
   }
 
   return response.json();

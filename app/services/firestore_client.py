@@ -336,12 +336,15 @@ class FirestoreClient:
         
         proposals = []
         for doc in query.stream():
-            proposals.append(doc.to_dict())
+            proposal_data = doc.to_dict() or {}
+            proposal_data["id"] = doc.id
+            proposals.append(proposal_data)
         
         total = len(proposals)
         status_counts = {"draft": 0, "sent": 0, "won": 0, "lost": 0}
         tone_stats = {}
         length_stats = {}
+        score_values: List[float] = []
         
         for prop in proposals:
             status = prop.get("status", "draft")
@@ -356,6 +359,17 @@ class FirestoreClient:
             proposal_length = prop.get("proposal_length")
             if proposal_length:
                 length_stats[proposal_length] = length_stats.get(proposal_length, 0) + 1
+
+            # Prefer explicit score fields; fallback to fit_score if present.
+            score_candidate = prop.get("score")
+            if score_candidate is None:
+                score_candidate = prop.get("quality_score")
+            if score_candidate is None:
+                score_candidate = prop.get("fit_score")
+            if isinstance(score_candidate, (int, float)):
+                # Normalize 1-10 scale to 0-100 if needed
+                normalized = score_candidate * 10 if score_candidate <= 10 else score_candidate
+                score_values.append(float(max(0.0, min(100.0, normalized))))
         
         # Calculate success rates
         sent_count = status_counts.get("sent", 0)
@@ -365,6 +379,56 @@ class FirestoreClient:
         
         win_rate = (won_count / total_responded * 100) if total_responded > 0 else 0
         response_rate = (total_responded / sent_count * 100) if sent_count > 0 else 0
+
+        avg_score = round(sum(score_values) / len(score_values), 2) if score_values else 0.0
+
+        # Feedback metrics
+        feedback_ref = self.db.collection("feedback")
+        feedback_query = feedback_ref.where(filter=FieldFilter("user_id", "==", user_id))
+        feedback_docs = [doc.to_dict() or {} for doc in feedback_query.stream()]
+        total_feedback = len(feedback_docs)
+        positive_feedback = sum(1 for fb in feedback_docs if fb.get("rating") == 1)
+        feedback_positive_rate = (
+            round((positive_feedback / total_feedback) * 100, 2) if total_feedback > 0 else 0.0
+        )
+
+        # Recent activity sorted by created_at (ISO strings)
+        proposals_sorted = sorted(
+            proposals,
+            key=lambda p: p.get("created_at") or "",
+            reverse=True,
+        )
+
+        recent_activity = [
+            {
+                "proposal_id": p.get("id"),
+                "status": p.get("status", "draft"),
+                "created_at": p.get("created_at"),
+                "source": p.get("source", "web"),
+                "fit_score": p.get("fit_score"),
+            }
+            for p in proposals_sorted[:10]
+        ]
+
+        # Top-performing proposal: won first, otherwise highest fit_score/score, then newest.
+        won_proposals = [p for p in proposals_sorted if p.get("status") == "won"]
+        candidate_pool = won_proposals if won_proposals else proposals_sorted
+        top_performing = None
+        if candidate_pool:
+            top_performing = max(
+                candidate_pool,
+                key=lambda p: (
+                    float(p.get("fit_score") or (p.get("score", 0) * 10 if p.get("score") else 0)),
+                    p.get("created_at") or "",
+                ),
+            )
+            top_performing = {
+                "proposal_id": top_performing.get("id"),
+                "status": top_performing.get("status", "draft"),
+                "fit_score": top_performing.get("fit_score"),
+                "created_at": top_performing.get("created_at"),
+                "excerpt": (top_performing.get("proposal") or "")[:220],
+            }
         
         return {
             "total_proposals": total,
@@ -375,7 +439,12 @@ class FirestoreClient:
             "won_count": won_count,
             "lost_count": lost_count,
             "tone_stats": tone_stats,
-            "length_stats": length_stats
+            "length_stats": length_stats,
+            "avg_score": avg_score,
+            "feedback_positive_rate": feedback_positive_rate,
+            "total_feedback": total_feedback,
+            "recent_activity": recent_activity,
+            "top_performing_proposal": top_performing,
         }
     
     def get_winning_patterns(self, user_id: str) -> Dict[str, Any]:
@@ -566,6 +635,33 @@ class FirestoreClient:
         doc_ref.delete()
         
         return True
+
+    def save_feedback(self, user_id: str, proposal_id: str, job_id: str, rating: int) -> str:
+        """
+        Save explicit user feedback for generated proposals.
+
+        Args:
+            user_id: User submitting feedback
+            proposal_id: Proposal document ID
+            job_id: Client job identifier or URL hash
+            rating: 1 for good, -1 for bad
+
+        Returns:
+            Feedback document ID
+        """
+        from datetime import datetime
+
+        doc_ref = self.db.collection("feedback").document()
+        payload = {
+            "feedback_id": doc_ref.id,
+            "user_id": user_id,
+            "proposal_id": proposal_id,
+            "job_id": job_id,
+            "rating": rating,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        doc_ref.set(payload)
+        return doc_ref.id
 
 
 # Global instance

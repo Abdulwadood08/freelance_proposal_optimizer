@@ -122,11 +122,44 @@ function extractFirebaseTokenFromPageStorage() {
 }
 
 function storageGet(keys) {
-  return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
+  return new Promise((resolve) => {
+    try {
+      chrome.storage.local.get(keys, resolve);
+    } catch (_err) {
+      // Extension context can be invalidated after reload while tab stays open.
+      // Return empty object so caller can fallback safely.
+      resolve({});
+    }
+  });
 }
 
 function storageSet(payload) {
-  return new Promise((resolve) => chrome.storage.local.set(payload, resolve));
+  return new Promise((resolve) => {
+    try {
+      chrome.storage.local.set(payload, resolve);
+    } catch (_err) {
+      // Best-effort in invalidated contexts; caller should continue without crashing.
+      resolve();
+    }
+  });
+}
+
+function decodeJwtPayload(token) {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+    return JSON.parse(atob(padded));
+  } catch (_err) {
+    return null;
+  }
+}
+
+function extractUserIdFromToken(token) {
+  const payload = decodeJwtPayload(token);
+  if (!payload) return "";
+  return payload.user_id || payload.uid || payload.sub || "";
 }
 
 function createPanelTemplate() {
@@ -162,6 +195,7 @@ function createPanelTemplate() {
       <section class="fpo-section">
         <h3>Fit Score</h3>
         <p class="fpo-fit-score" id="fpoFitScore">-</p>
+        <ul class="fpo-list fpo-breakdown-list" id="fpoFitBreakdown"><li>Generate to view breakdown.</li></ul>
       </section>
 
       <section class="fpo-section">
@@ -180,6 +214,10 @@ function createPanelTemplate() {
         <div class="fpo-row" style="margin-top:8px;">
           <button class="fpo-btn fpo-btn--muted" id="fpoCopyBtn">Copy Proposal</button>
           <button class="fpo-btn fpo-btn--muted" id="fpoInsertBtn">Insert in Upwork</button>
+        </div>
+        <div class="fpo-feedback-row">
+          <button class="fpo-btn fpo-btn--muted" id="fpoFeedbackGood">👍 Good</button>
+          <button class="fpo-btn fpo-btn--muted" id="fpoFeedbackBad">👎 Bad</button>
         </div>
       </section>
 
@@ -247,8 +285,14 @@ function setupInPageAssistant() {
   const keywordsEl = panel.querySelector("#fpoKeywords");
   const strategyEl = panel.querySelector("#fpoStrategy");
   const fitScoreEl = panel.querySelector("#fpoFitScore");
+  const fitBreakdownEl = panel.querySelector("#fpoFitBreakdown");
   const variationsEl = panel.querySelector("#fpoVariations");
   const statusEl = panel.querySelector("#fpoStatus");
+  const feedbackGoodBtn = panel.querySelector("#fpoFeedbackGood");
+  const feedbackBadBtn = panel.querySelector("#fpoFeedbackBad");
+  let lastProposalId = "";
+  let lastJobId = "";
+  let activeFeedback = 0;
 
   function setStatus(text, isError = false) {
     statusEl.textContent = text;
@@ -260,14 +304,21 @@ function setupInPageAssistant() {
     regenerateBtn.disabled = loading;
     copyBtn.disabled = loading;
     insertBtn.disabled = loading;
+    feedbackGoodBtn.disabled = loading;
+    feedbackBadBtn.disabled = loading;
   }
 
   function setEmptyState() {
     fitScoreEl.textContent = "-";
+    fitBreakdownEl.innerHTML = "<li>Generate to view breakdown.</li>";
     strategyEl.textContent = "No strategy yet.";
     keywordsEl.innerHTML = "<li>Generate to view keywords.</li>";
     variationsEl.innerHTML = "<li>No variations yet.</li>";
     proposalEl.value = "";
+    lastProposalId = "";
+    activeFeedback = 0;
+    feedbackGoodBtn.classList.remove("is-active");
+    feedbackBadBtn.classList.remove("is-active");
   }
 
   async function loadPrefs() {
@@ -288,12 +339,21 @@ function setupInPageAssistant() {
 
   async function getToken() {
     const { firebaseIdToken } = await storageGet(["firebaseIdToken"]);
-    return firebaseIdToken || "";
+    if (firebaseIdToken) return firebaseIdToken;
+    return extractFirebaseTokenFromPageStorage() || "";
   }
 
   function renderResult(result) {
     fitScoreEl.textContent = `${result.fit_score ?? "-"}%`;
     strategyEl.textContent = result.strategy || "No strategy generated.";
+    const breakdown = result.breakdown || {};
+    const breakdownItems = [
+      `Skills: ${breakdown.skills ?? "-"}`,
+      `Experience: ${breakdown.experience ?? "-"}`,
+      `Requirements: ${breakdown.requirements ?? "-"}`,
+      `Proposal: ${breakdown.proposal ?? "-"}`,
+    ];
+    fitBreakdownEl.innerHTML = breakdownItems.map((item) => `<li>${item}</li>`).join("");
 
     const keywords = Array.isArray(result.keywords) ? result.keywords : [];
     keywordsEl.innerHTML = keywords.length
@@ -310,6 +370,57 @@ function setupInPageAssistant() {
       : "<li>No variations returned.</li>";
 
     proposalEl.value = result.proposal || "";
+    lastProposalId = result.id || "";
+    activeFeedback = 0;
+    feedbackGoodBtn.classList.remove("is-active");
+    feedbackBadBtn.classList.remove("is-active");
+  }
+
+  async function submitFeedback(rating) {
+    try {
+      if (!lastProposalId) {
+        setStatus("Generate a proposal first to submit feedback.", true);
+        return;
+      }
+
+      const backendBaseUrl = (backendUrlEl.value || FPO_DEFAULT_BACKEND).trim();
+      const token = await getToken();
+      if (!token) {
+        setStatus("No auth token found for feedback.", true);
+        return;
+      }
+      const userId = extractUserIdFromToken(token);
+      if (!userId) {
+        setStatus("Could not extract user ID from token.", true);
+        return;
+      }
+
+      const response = await fetch(`${backendBaseUrl}/v1/feedback`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          proposal_id: lastProposalId,
+          job_id: lastJobId || window.location.href,
+          rating,
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.detail || `Feedback failed with status ${response.status}`);
+      }
+
+      activeFeedback = rating;
+      feedbackGoodBtn.classList.toggle("is-active", rating === 1);
+      feedbackBadBtn.classList.toggle("is-active", rating === -1);
+      setStatus(rating === 1 ? "Thanks! Positive feedback saved." : "Feedback saved. We will improve.");
+    } catch (error) {
+      setStatus(error.message || "Failed to submit feedback.", true);
+    }
   }
 
   async function runAnalysis() {
@@ -330,6 +441,7 @@ function setupInPageAssistant() {
       await storageSet({ preferredTone: tone, backendBaseUrl });
 
       const job = extractUpworkJobData();
+      lastJobId = job.url || window.location.href;
       if (!job.title && !job.description) {
         throw new Error(
           "Unable to extract job title/description from this Upwork page.",
@@ -368,7 +480,15 @@ function setupInPageAssistant() {
       renderResult(data);
       setStatus("Done. You can copy or insert the proposal.");
     } catch (error) {
-      setStatus(error.message || "Failed to analyze job.", true);
+      const rawMessage = error?.message || "Failed to analyze job.";
+      if (rawMessage.includes("Extension context invalidated")) {
+        setStatus(
+          "Extension was reloaded. Refresh this Upwork tab once, then click Generate again.",
+          true,
+        );
+      } else {
+        setStatus(rawMessage, true);
+      }
     } finally {
       setLoading(false);
     }
@@ -404,6 +524,8 @@ function setupInPageAssistant() {
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
     setStatus("Proposal inserted into page.");
   });
+  feedbackGoodBtn.addEventListener("click", () => submitFeedback(1));
+  feedbackBadBtn.addEventListener("click", () => submitFeedback(-1));
 
   loadPrefs().then(() => setStatus("Ready."));
 }

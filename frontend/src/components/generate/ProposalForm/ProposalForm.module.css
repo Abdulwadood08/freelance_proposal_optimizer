@@ -73,6 +73,20 @@
   white-space: pre-line;
 }
 
+.improveToggle {
+  margin-top: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--dashboard-subtitle);
+}
+
+.improveToggle input {
+  width: 14px;
+  height: 14px;
+}
+
 .generateBtn {
   display: inline-flex;
   align-items: center;

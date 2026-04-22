@@ -31,6 +31,26 @@
   color: var(--error-color);
 }
 
+.banner {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  border: 1px solid transparent;
+}
+
+.bannerSuccess {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: #10b981;
+}
+
+.bannerError {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+}
+
 .emptyState {
   text-align: center;
   padding: 4rem 2rem;
@@ -127,6 +147,12 @@
   flex-shrink: 0;
 }
 
+.statusActions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
 .statusTag {
   padding: 0.35rem 0.875rem;
   border-radius: 999px;
@@ -172,6 +198,33 @@
   border-color: #8a2be2;
 }
 
+.statusBtn {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--dashboard-subtitle);
+  background: transparent;
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.statusBtn:hover:not(:disabled) {
+  border-color: #8a2be2;
+  color: var(--dashboard-title);
+}
+
+.statusBtnActive {
+  border-color: #8a2be2;
+  color: #8a2be2;
+  background: rgba(138, 43, 226, 0.12);
+}
+
+.statusBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 @media (max-width: 768px) {
   .proposalCard {
     flex-wrap: wrap;
@@ -180,12 +233,16 @@
 
   .cardActions {
     width: 100%;
-    justify-content: flex-end;
+    justify-content: space-between;
   }
 
   .cardMeta {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
+  }
+
+  .statusActions {
+    flex-wrap: wrap;
   }
 }

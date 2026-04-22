@@ -8,6 +8,7 @@ import {
   createTemplate,
   scoreProposal,
   type ProposalScore,
+  submitProposalFeedback,
 } from "@/lib/api";
 import { exportToPDF, exportToDOCX, exportToTXT } from "@/lib/export";
 import styles from "./ProposalDisplay.module.css";
@@ -45,10 +46,16 @@ export default function ProposalDisplay({
   const [scoring, setScoring] = useState(false);
   const [scoreResult, setScoreResult] = useState<ProposalScore | null>(null);
   const [showScore, setShowScore] = useState(false);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackValue, setFeedbackValue] = useState<1 | -1 | null>(null);
 
   useEffect(() => {
     setProposalState(proposal);
   }, [proposal]);
+
+  useEffect(() => {
+    setFeedbackValue(null);
+  }, [proposal?.id, activeTone]);
 
   // Close export menu when clicking outside
   useEffect(() => {
@@ -215,6 +222,51 @@ export default function ProposalDisplay({
       });
     } finally {
       setScoring(false);
+    }
+  };
+
+  const buildJobId = () => {
+    const raw = (proposalState?.job_post || "").trim();
+    if (!raw) return proposalState?.id || "unknown-job";
+    let hash = 0;
+    for (let i = 0; i < raw.length; i += 1) {
+      hash = (hash * 31 + raw.charCodeAt(i)) >>> 0;
+    }
+    return `job_${hash.toString(16)}`;
+  };
+
+  const handleFeedback = async (rating: 1 | -1) => {
+    if (!currentUser || !proposalState?.id) {
+      setMessage({
+        type: "error",
+        text: "Feedback failed: missing user or proposal context.",
+      });
+      return;
+    }
+    try {
+      setFeedbackLoading(true);
+      await submitProposalFeedback(
+        currentUser.uid,
+        proposalState.id,
+        buildJobId(),
+        rating,
+        currentUser,
+      );
+      setFeedbackValue(rating);
+      setMessage({
+        type: "success",
+        text:
+          rating === 1
+            ? "Thanks! Positive feedback saved."
+            : "Thanks! Feedback saved. We will improve future proposals.",
+      });
+    } catch (error: any) {
+      setMessage({
+        type: "error",
+        text: error?.message || "Failed to submit feedback.",
+      });
+    } finally {
+      setFeedbackLoading(false);
     }
   };
 
@@ -540,6 +592,28 @@ export default function ProposalDisplay({
                 <p>{scoreResult.overall_feedback}</p>
               </div>
             )}
+
+            <div className={styles.feedbackRow}>
+              <h4 className={styles.feedbackTitle}>Was this proposal useful?</h4>
+              <div className={styles.feedbackButtons}>
+                <button
+                  type="button"
+                  className={`${styles.feedbackButton} ${feedbackValue === 1 ? styles.feedbackButtonActive : ""}`}
+                  onClick={() => handleFeedback(1)}
+                  disabled={feedbackLoading}
+                >
+                  👍 Good
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.feedbackButton} ${feedbackValue === -1 ? styles.feedbackButtonActive : ""}`}
+                  onClick={() => handleFeedback(-1)}
+                  disabled={feedbackLoading}
+                >
+                  👎 Bad
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

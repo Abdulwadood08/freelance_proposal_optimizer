@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getUserProposals, type Proposal } from "@/lib/api";
+import { getUserProposals, updateProposalStatus, type Proposal } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import styles from "./ProposalHistory.module.css";
 
@@ -49,8 +49,13 @@ function extractTitle(jobPost: string): string {
 }
 
 function calculateMatchPercentage(proposal: Proposal): number {
-  // Simple heuristic: base match on proposal length and status
-  // In a real app, this would come from backend analysis
+  // Prefer backend fit score if present.
+  const fitScore = (proposal as Proposal & { fit_score?: number }).fit_score;
+  if (typeof fitScore === "number") {
+    return Math.min(100, Math.max(0, Math.round(fitScore)));
+  }
+
+  // Fallback deterministic heuristic for legacy records.
   let base = 75;
   if (proposal.status === "won") base += 15;
   else if (proposal.status === "sent") base += 10;
@@ -60,8 +65,8 @@ function calculateMatchPercentage(proposal: Proposal): number {
   const length = proposal.proposal?.length || 0;
   if (length > 500) base += 5;
   if (length > 1000) base += 5;
-  
-  return Math.min(100, Math.max(60, base + Math.floor(Math.random() * 20)));
+
+  return Math.min(100, Math.max(60, base));
 }
 
 function getStatusInfo(status?: string) {
@@ -84,6 +89,8 @@ export default function ProposalHistory() {
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [statusUpdating, setStatusUpdating] = useState<Record<string, boolean>>({});
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     if (currentUser) {
@@ -102,6 +109,35 @@ export default function ProposalHistory() {
       setError((err as Error).message || "Failed to load proposals");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStatusUpdate = async (
+    proposalId: string,
+    nextStatus: "draft" | "sent" | "won" | "lost",
+  ) => {
+    if (!currentUser) return;
+    setMessage(null);
+    setStatusUpdating((prev) => ({ ...prev, [proposalId]: true }));
+
+    // Optimistic update
+    const previousProposals = proposals;
+    setProposals((prev) =>
+      prev.map((p) => (p.id === proposalId ? { ...p, status: nextStatus } : p)),
+    );
+
+    try {
+      await updateProposalStatus(proposalId, currentUser.uid, nextStatus, currentUser);
+      setMessage({ type: "success", text: `Proposal marked as ${nextStatus}.` });
+    } catch (err: unknown) {
+      // rollback on error
+      setProposals(previousProposals);
+      setMessage({
+        type: "error",
+        text: (err as Error).message || "Failed to update proposal status",
+      });
+    } finally {
+      setStatusUpdating((prev) => ({ ...prev, [proposalId]: false }));
     }
   };
 
@@ -132,6 +168,12 @@ export default function ProposalHistory() {
         <h1 className={styles.title}>Proposal History</h1>
         <p className={styles.subtitle}>Track all your generated proposals and their status</p>
       </header>
+
+      {message && (
+        <div className={`${styles.banner} ${message.type === "success" ? styles.bannerSuccess : styles.bannerError}`}>
+          {message.text}
+        </div>
+      )}
 
       {proposals.length === 0 ? (
         <div className={styles.emptyState}>
@@ -164,7 +206,22 @@ export default function ProposalHistory() {
                   <span className={`${styles.statusTag} ${statusInfo.className}`}>
                     {statusInfo.label}
                   </span>
-                  {(proposal.status === "lost" || proposal.status === "draft") && (
+                  <div className={styles.statusActions}>
+                    {(["sent", "won", "lost"] as const).map((statusValue) => (
+                      <button
+                        key={statusValue}
+                        type="button"
+                        className={`${styles.statusBtn} ${
+                          proposal.status === statusValue ? styles.statusBtnActive : ""
+                        }`}
+                        disabled={Boolean(statusUpdating[proposal.id]) || proposal.status === statusValue}
+                        onClick={() => handleStatusUpdate(proposal.id, statusValue)}
+                      >
+                        {statusUpdating[proposal.id] && proposal.status !== statusValue
+                          ? "..."
+                          : statusValue.charAt(0).toUpperCase() + statusValue.slice(1)}
+                      </button>
+                    ))}
                     <button
                       type="button"
                       className={styles.previewBtn}
@@ -172,7 +229,7 @@ export default function ProposalHistory() {
                     >
                       Preview
                     </button>
-                  )}
+                  </div>
                 </div>
               </div>
             );

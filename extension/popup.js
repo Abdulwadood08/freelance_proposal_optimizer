@@ -69,6 +69,10 @@ function sendToTab(tabId, payload) {
   });
 }
 
+function queryTabs(queryInfo) {
+  return new Promise((resolve) => chrome.tabs.query(queryInfo, resolve));
+}
+
 function storageGet(keys) {
   return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
 }
@@ -82,17 +86,96 @@ async function updateTokenStatus() {
   tokenStatusEl.textContent = firebaseIdToken ? "Token: set" : "Token: not set";
 }
 
+async function tryReadTokenViaMessage(tabId) {
+  try {
+    const response = await sendToTab(tabId, { type: "GET_FIREBASE_TOKEN" });
+    if (response?.ok && response.token) return response.token;
+  } catch (_err) {
+    // no-op: this tab may not have a content script receiver
+  }
+  return "";
+}
+
+async function tryReadTokenViaInjectedScript(tabId) {
+  try {
+    const result = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => {
+        const extensionToken =
+          window.localStorage.getItem("fpo_extension_token") ||
+          window.sessionStorage.getItem("fpo_extension_token") ||
+          "";
+        if (extensionToken) return extensionToken;
+
+        const readFirebaseToken = (storageObj) => {
+          for (let i = 0; i < storageObj.length; i += 1) {
+            const key = storageObj.key(i);
+            if (!key || !key.startsWith("firebase:authUser:")) continue;
+            const raw = storageObj.getItem(key);
+            if (!raw) continue;
+            try {
+              const parsed = JSON.parse(raw);
+              const token = parsed?.stsTokenManager?.accessToken;
+              if (token) return token;
+            } catch (_e) {
+              // continue scanning
+            }
+          }
+          return "";
+        };
+
+        return readFirebaseToken(window.localStorage) || readFirebaseToken(window.sessionStorage) || "";
+      },
+    });
+    return result?.[0]?.result || "";
+  } catch (_err) {
+    return "";
+  }
+}
+
+async function findTokenAcrossAppTabs() {
+  const candidates = await queryTabs({
+    url: ["http://localhost:3000/*", "http://127.0.0.1:3000/*"],
+  });
+
+  for (const tab of candidates) {
+    if (!tab?.id) continue;
+    const fromMessage = await tryReadTokenViaMessage(tab.id);
+    if (fromMessage) return fromMessage;
+    const fromScript = await tryReadTokenViaInjectedScript(tab.id);
+    if (fromScript) return fromScript;
+  }
+  return "";
+}
+
 async function onReadToken() {
   try {
-    setMessage("Reading token from current tab...");
-    const tab = await getActiveTab();
-    const response = await sendToTab(tab.id, { type: "GET_FIREBASE_TOKEN" });
+    setMessage("Reading token...");
 
-    if (!response?.ok || !response.token) {
-      throw new Error("No Firebase token found in this tab. Open your app tab and try again.");
+    // Fast-path: if already cached in extension storage, reuse it.
+    const cached = await storageGet(["firebaseIdToken"]);
+    if (cached.firebaseIdToken) {
+      await updateTokenStatus();
+      setMessage("Token already set.");
+      return;
     }
 
-    await storageSet({ firebaseIdToken: response.token });
+    const tab = await getActiveTab();
+    let token = await tryReadTokenViaMessage(tab.id);
+    if (!token) {
+      token = await tryReadTokenViaInjectedScript(tab.id);
+    }
+    if (!token) {
+      token = await findTokenAcrossAppTabs();
+    }
+
+    if (!token) {
+      throw new Error(
+        "No Firebase token found. Please login in your web app tab (localhost:3000), keep it open, then retry Read Token.",
+      );
+    }
+
+    await storageSet({ firebaseIdToken: token });
     await updateTokenStatus();
     setMessage("Token saved.");
   } catch (error) {

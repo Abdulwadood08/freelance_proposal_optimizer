@@ -68,7 +68,6 @@
   margin: 0 0 1.25rem 0;
 }
 
-/* Suggestions Card */
 .suggestionsCard {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
@@ -77,67 +76,54 @@
   margin-bottom: 1.5rem;
 }
 
-.suggestionsList {
+.topProposal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.topProposalMeta {
+  margin: 0;
+  color: var(--dashboard-subtitle);
+  font-size: 0.875rem;
+}
+
+.topProposalExcerpt {
+  margin: 0.25rem 0 0 0;
+  color: var(--dashboard-title);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.activityList {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
 
-.suggestionItem {
-  display: flex;
-  gap: 1rem;
-  padding: 1rem;
-  border-radius: 10px;
-  align-items: flex-start;
-}
-
-.suggestionSuccess {
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-}
-
-.suggestionWarning {
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.2);
-}
-
-.suggestionIcon {
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-  margin-top: 0.125rem;
-}
-
-.suggestionSuccess .suggestionIcon {
-  color: #10b981;
-}
-
-.suggestionWarning .suggestionIcon {
-  color: #f59e0b;
-}
-
-.suggestionContent {
-  flex: 1;
-}
-
-.suggestionTitle {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--dashboard-title);
-  margin: 0 0 0.25rem 0;
-}
-
-.suggestionDescription {
-  font-size: 0.875rem;
-  color: var(--dashboard-subtitle);
-  margin: 0;
-  line-height: 1.5;
-}
-
-/* Comparison Card */
-.comparisonCard {
-  background: var(--card-bg);
+.activityItem {
   border: 1px solid var(--card-border);
-  border-radius: 12px;
-  padding: 1.5rem;
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.activityTitle {
+  margin: 0;
+  color: var(--dashboard-title);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.activityMeta {
+  margin: 0.25rem 0 0 0;
+  color: var(--dashboard-subtitle);
+  font-size: 0.8rem;
+}
+
+.emptyText {
+  margin: 0;
+  color: var(--dashboard-subtitle);
+  font-size: 0.9rem;
 }

@@ -1,122 +1,64 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getUserProposals, scoreProposal, type Proposal } from "@/lib/api";
+import { getProposalAnalytics, type ProposalAnalytics } from "@/lib/api";
 import styles from "./Analytics.module.css";
 import ScoreCard from "./ScoreCard";
-import QualityRadarChart from "./QualityRadarChart";
 import KeywordCoverageChart from "./KeywordCoverageChart";
-import ComparisonBars from "./ComparisonBars";
-
-interface Suggestion {
-  type: "success" | "warning";
-  title: string;
-  description: string;
-}
 
 export default function Analytics() {
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
-  const [proposals, setProposals] = useState<Proposal[]>([]);
-  const [scores, setScores] = useState({
-    quality: 87,
-    personalization: 92,
-    keywords: 78,
-  });
-  const [qualityBreakdown, setQualityBreakdown] = useState({
-    originality: 85,
-    personalization: 92,
-    valueProposition: 80,
-    professionalTone: 90,
-    callToAction: 75,
-    empathy: 88,
-    formatting: 85,
-  });
-  const [keywordCoverage, setKeywordCoverage] = useState([
-    { keyword: "Technical", coverage: 95 },
-    { keyword: "Teamwork", coverage: 85 },
-    { keyword: "Problem Solving", coverage: 80 },
-    { keyword: "Market Research", coverage: 75 },
-    { keyword: "Testing", coverage: 70 },
-    { keyword: "Analytics", coverage: 65 },
-  ]);
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([
-    {
-      type: "success",
-      title: "Strong Opening",
-      description: "Starts strong and immediately captures attention and establishes credibility.",
-    },
-    {
-      type: "success",
-      title: "Add Specific Instances",
-      description: "Include specific quantifiable achievements that demonstrate how you've solved similar problems.",
-    },
-    {
-      type: "success",
-      title: "Good Keyword Coverage",
-      description: "You've covered 78% of the important keywords from the job description.",
-    },
-    {
-      type: "warning",
-      title: "Enhance Call to Action",
-      description: "Make your call to action more direct and action-oriented, with clear next steps or availability.",
-    },
-    {
-      type: "success",
-      title: "Professional Tone",
-      description: "Your writing style is appropriate for the industry and engaging.",
-    },
-  ]);
-  const [comparisons, setComparisons] = useState({
-    personalization: { you: 80, avg: 70 },
-    clarity: { you: 78, avg: 75 },
-    valueProp: { you: 70, avg: 60 },
-    professionalism: { you: 85, avg: 75 },
-  });
+  const [analytics, setAnalytics] = useState<ProposalAnalytics | null>(null);
 
-  useEffect(() => {
-    if (currentUser) {
-      loadProposals();
-    }
-  }, [currentUser]);
-
-  const loadProposals = async () => {
+  const loadAnalytics = useCallback(async () => {
     if (!currentUser) return;
     setLoading(true);
     try {
-      const result = await getUserProposals(currentUser.uid, currentUser, 10);
-      setProposals(result.proposals || []);
-      if (result.proposals && result.proposals.length > 0) {
-        setSelectedProposal(result.proposals[0]);
-        await analyzeProposal(result.proposals[0]);
-      }
+      const result = await getProposalAnalytics(currentUser.uid, currentUser);
+      setAnalytics(result);
     } catch (err) {
-      console.error("Failed to load proposals:", err);
+      console.error("Failed to load analytics:", err);
+      setAnalytics(null);
     } finally {
       setLoading(false);
     }
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadAnalytics();
+    }
+  }, [currentUser, loadAnalytics]);
+
+  const clampPercent = (value: number) => Math.max(0, Math.min(100, Math.round(value || 0)));
+
+  const getStatusCoverageData = () => {
+    if (!analytics) return [];
+    const total = analytics.total_proposals || 1;
+    const entries = Object.entries(analytics.status_counts || {});
+    return entries.map(([status, count]) => ({
+      keyword: status.charAt(0).toUpperCase() + status.slice(1),
+      coverage: clampPercent((count / total) * 100),
+    }));
   };
 
-  const analyzeProposal = async (proposal: Proposal) => {
-    if (!currentUser || !proposal.job_post) return;
-    try {
-      const scoreResult = await scoreProposal(
-        currentUser.uid,
-        proposal.proposal || proposal.tone_variations?.professional || "",
-        proposal.job_post,
-        currentUser
-      );
-      // Update scores based on API result
-      setScores({
-        quality: Math.round(scoreResult.score * 10),
-        personalization: Math.round(scoreResult.section_scores.personalization * 50),
-        keywords: 78, // This would come from keyword analysis
-      });
-    } catch (err) {
-      console.error("Failed to analyze proposal:", err);
-    }
+  const formatWhen = (iso?: string) => {
+    if (!iso) return "Unknown date";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return d.toLocaleString();
+  };
+
+  const getRecentActivityRows = () => {
+    if (!analytics?.recent_activity?.length) return [];
+    return analytics.recent_activity.slice(0, 6).map((item) => ({
+      id: item.proposal_id || "unknown",
+      title: `${(item.status || "draft").toUpperCase()} proposal`,
+      meta: `${item.source || "web"} • ${formatWhen(item.created_at)}`,
+      fit: item.fit_score ?? null,
+    }));
   };
 
   if (loading) {
@@ -132,82 +74,75 @@ export default function Analytics() {
       <header className={styles.header}>
         <h1 className={styles.title}>Proposal Analysis</h1>
         <p className={styles.subtitle}>
-          Detailed insights and recommendations for your proposal
+          Live analytics from your Firestore data
         </p>
       </header>
 
-      {/* Top Metrics Section */}
       <div className={styles.metricsGrid}>
         <ScoreCard
-          title="Proposal Quality Score"
-          score={scores.quality}
-          message="Excellent! Ready to message."
+          title="Total Proposals"
+          score={analytics?.total_proposals || 0}
+          message="All proposals created in your workspace."
         />
         <ScoreCard
-          title="Personalization Score"
-          score={scores.personalization}
-          message="Extremely Personalized."
+          title="Average Score"
+          score={clampPercent(analytics?.avg_score || 0)}
+          message="Based on available proposal score signals."
         />
         <ScoreCard
-          title="Keywords Match Percentage"
-          score={scores.keywords}
-          message="Great! Close for top keywords."
+          title="Positive Feedback Rate"
+          score={clampPercent(analytics?.feedback_positive_rate || 0)}
+          message={`${analytics?.total_feedback || 0} feedback entries received.`}
           isPercentage
         />
       </div>
 
-      {/* Analytics Breakdown Section */}
       <div className={styles.breakdownGrid}>
-        {/* Quality Breakdown Radar Chart */}
         <div className={styles.chartCard}>
-          <h3 className={styles.chartTitle}>Quality Breakdown</h3>
-          <QualityRadarChart data={qualityBreakdown} />
+          <h3 className={styles.chartTitle}>Proposal Status Distribution</h3>
+          <KeywordCoverageChart data={getStatusCoverageData()} />
         </div>
 
-        {/* Keyword Coverage Chart */}
         <div className={styles.chartCard}>
-          <h3 className={styles.chartTitle}>Keyword Coverage (top 50%)</h3>
-          <KeywordCoverageChart data={keywordCoverage} />
-        </div>
-      </div>
-
-      {/* AI Suggestions */}
-      <div className={styles.suggestionsCard}>
-        <h3 className={styles.chartTitle}>AI Suggestions for Improvement</h3>
-        <div className={styles.suggestionsList}>
-          {suggestions.map((suggestion, index) => (
-            <div
-              key={index}
-              className={`${styles.suggestionItem} ${
-                suggestion.type === "success" ? styles.suggestionSuccess : styles.suggestionWarning
-              }`}
-            >
-              <div className={styles.suggestionIcon}>
-                {suggestion.type === "success" ? (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="8" x2="12" y2="12" />
-                    <line x1="12" y1="16" x2="12.01" y2="16" />
-                  </svg>
-                )}
-              </div>
-              <div className={styles.suggestionContent}>
-                <h4 className={styles.suggestionTitle}>{suggestion.title}</h4>
-                <p className={styles.suggestionDescription}>{suggestion.description}</p>
-              </div>
+          <h3 className={styles.chartTitle}>Top Performing Proposal</h3>
+          {analytics?.top_performing_proposal ? (
+            <div className={styles.topProposal}>
+              <p className={styles.topProposalMeta}>
+                Status: <strong>{analytics.top_performing_proposal.status}</strong>
+                {" • "}
+                Fit Score:{" "}
+                <strong>{analytics.top_performing_proposal.fit_score ?? "N/A"}</strong>
+              </p>
+              <p className={styles.topProposalMeta}>
+                Created: {formatWhen(analytics.top_performing_proposal.created_at)}
+              </p>
+              <p className={styles.topProposalExcerpt}>
+                {analytics.top_performing_proposal.excerpt || "No proposal excerpt available."}
+              </p>
             </div>
-          ))}
+          ) : (
+            <p className={styles.emptyText}>No top-performing proposal available yet.</p>
+          )}
         </div>
       </div>
 
-      {/* Comparison Section */}
-      <div className={styles.comparisonCard}>
-        <h3 className={styles.chartTitle}>How You Compare to Average Proposals</h3>
-        <ComparisonBars data={comparisons} />
+      <div className={styles.suggestionsCard}>
+        <h3 className={styles.chartTitle}>Recent Activity</h3>
+        {getRecentActivityRows().length ? (
+          <div className={styles.activityList}>
+            {getRecentActivityRows().map((row) => (
+              <div key={row.id + row.meta} className={styles.activityItem}>
+                <p className={styles.activityTitle}>{row.title}</p>
+                <p className={styles.activityMeta}>
+                  {row.meta}
+                  {row.fit !== null ? ` • fit ${row.fit}` : ""}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className={styles.emptyText}>No recent activity yet.</p>
+        )}
       </div>
     </div>
   );

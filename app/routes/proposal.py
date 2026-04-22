@@ -28,6 +28,7 @@ from app.services.llm_router import (
 )
 from app.services.huggingface_client import get_huggingface_client
 from app.services.openai_client import get_openai_client
+from app.services.fit_score_service import calculate_fit_score
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -57,6 +58,17 @@ class ProposalResponse(BaseModel):
     cover_letter: str
     tone_variations: dict
     job_post: Optional[str] = None  # Required for scoring on the frontend
+
+
+class ProposalGenerateImprovedResponse(ProposalResponse):
+    """Schema for improved proposal generation response."""
+    original_proposal: Optional[str] = None
+    improved_proposal_candidate: Optional[str] = None
+    score_before: Optional[float] = None
+    score_after: Optional[float] = None
+    improvement_attempted: bool = False
+    improvement_applied: bool = False
+    improvement_reason: Optional[str] = None
 
 
 class ProposalUpdateRequest(BaseModel):
@@ -129,10 +141,19 @@ class PluginAnalyzeJobResponse(BaseModel):
     """Schema for full extension assistant analysis response."""
     id: Optional[str] = None
     fit_score: int
+    breakdown: dict
     keywords: List[str]
     strategy: str
     proposal: str
     variations: List[PluginVariation]
+
+
+class FeedbackCreateRequest(BaseModel):
+    """Schema for storing proposal feedback."""
+    user_id: str
+    proposal_id: str
+    job_id: str
+    rating: int  # 1 (good) or -1 (bad)
 
 
 def _get_user_id_from_bearer_token(authorization: Optional[str]) -> str:
@@ -280,6 +301,146 @@ async def generate_proposal(request: ProposalGenerateRequest):
         )
 
 
+@router.post(
+    "/v1/proposals/generate-improved",
+    response_model=ProposalGenerateImprovedResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def generate_improved_proposal(request: ProposalGenerateRequest):
+    """
+    Generate proposal, score it, and auto-improve once if score is below threshold.
+    """
+    try:
+        firestore_client = _get_firestore()
+        user_data = firestore_client.get_user(request.user_id)
+        if not user_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"User with id '{request.user_id}' not found",
+            )
+
+        user_skills = user_data.get("skills", [])
+        case_studies = user_data.get("case_studies", [])
+        winning_patterns = firestore_client.get_winning_patterns(request.user_id)
+
+        base_result = _generate_with_hf_primary_fallback_openai(
+            user_skills=user_skills,
+            case_studies=case_studies,
+            job_post=request.job_post,
+            preferred_tone=request.preferred_tone or "professional",
+            proposal_length=request.proposal_length or "medium",
+            winning_patterns=winning_patterns if winning_patterns else None,
+        )
+
+        if not all(k in base_result for k in ["proposal", "cover_letter", "tone_variations"]):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Invalid response format from proposal generation provider.",
+            )
+
+        scoring_client = get_scoring_client()
+        score_before_result = scoring_client.score_proposal_quality(
+            proposal=base_result.get("proposal", ""),
+            job_post=request.job_post,
+            user_skills=user_skills,
+        )
+
+        try:
+            score_before = float(score_before_result.get("score", 0))
+        except (TypeError, ValueError):
+            score_before = 0.0
+
+        final_proposal = base_result.get("proposal", "")
+        improved_candidate = None
+        score_after = score_before
+        improvement_attempted = False
+        improvement_applied = False
+        improvement_reason = "Initial score met threshold; no rewrite needed."
+
+        if score_before < 8.0:
+            improvement_attempted = True
+            openai_client = get_openai_client()
+            improved_proposal = openai_client.improve_proposal_once(
+                proposal=base_result.get("proposal", ""),
+                job_post=request.job_post,
+                user_skills=user_skills,
+                weaknesses=score_before_result.get("weaknesses", []),
+                suggestions=score_before_result.get("suggestions", []),
+                preferred_tone=request.preferred_tone or "professional",
+                target_length=request.proposal_length or "medium",
+            )
+            improved_candidate = improved_proposal
+
+            score_after_result = scoring_client.score_proposal_quality(
+                proposal=improved_proposal,
+                job_post=request.job_post,
+                user_skills=user_skills,
+            )
+            try:
+                rescored = float(score_after_result.get("score", 0))
+            except (TypeError, ValueError):
+                rescored = score_before
+
+            if rescored >= score_before:
+                final_proposal = improved_proposal
+                score_after = rescored
+                improvement_applied = True
+                improvement_reason = "Improved draft accepted (score maintained or increased)."
+            else:
+                score_after = rescored
+                improvement_reason = "Improved draft rejected because score decreased."
+
+        proposal_data = {
+            "proposal": final_proposal,
+            "cover_letter": final_proposal,
+            "tone_variations": {
+                "professional": final_proposal,
+                "friendly": final_proposal,
+                "confident": final_proposal,
+            },
+            "job_post": request.job_post,
+            "preferred_tone": request.preferred_tone or "professional",
+            "proposal_length": request.proposal_length or "medium",
+            "proposal_original": base_result.get("proposal", ""),
+            "proposal_improved_candidate": improved_candidate,
+            "score_before": score_before,
+            "score_after": score_after,
+            "improvement_attempted": improvement_attempted,
+            "improvement_applied": improvement_applied,
+            "improvement_reason": improvement_reason,
+        }
+        proposal_id = firestore_client.save_proposal(
+            user_id=request.user_id,
+            proposal_data=proposal_data,
+        )
+
+        return {
+            "id": proposal_id,
+            "proposal": final_proposal,
+            "cover_letter": final_proposal,
+            "tone_variations": {
+                "professional": final_proposal,
+                "friendly": final_proposal,
+                "confident": final_proposal,
+            },
+            "job_post": request.job_post,
+            "original_proposal": base_result.get("proposal", ""),
+            "improved_proposal_candidate": improved_candidate,
+            "score_before": score_before,
+            "score_after": score_after,
+            "improvement_attempted": improvement_attempted,
+            "improvement_applied": improvement_applied,
+            "improvement_reason": improvement_reason,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate improved proposal: {str(e)}",
+        )
+
+
 @router.post("/plugin/generate-proposal", response_model=PluginGenerateProposalResponse)
 async def generate_proposal_from_plugin(
     request: PluginGenerateProposalRequest,
@@ -410,13 +571,6 @@ async def analyze_job_from_plugin(
         suggestions = analysis_result.get("suggestions", []) or []
         profile_gaps = analysis_result.get("profile_gaps", []) or []
 
-        match_ratio = (
-            len(relevant_skills) / (len(relevant_skills) + len(missing_skills))
-            if (len(relevant_skills) + len(missing_skills)) > 0
-            else 0.6
-        )
-        fit_score = int(max(35, min(95, round(match_ratio * 100))))
-
         keywords = key_requirements + relevant_skills
         deduped_keywords = list(dict.fromkeys([str(k).strip() for k in keywords if str(k).strip()]))
 
@@ -450,6 +604,17 @@ async def analyze_job_from_plugin(
                 detail="OpenAI response did not contain a proposal.",
             )
 
+        fit_result = calculate_fit_score(
+            relevant_skills=relevant_skills,
+            missing_skills=missing_skills,
+            key_requirements=key_requirements,
+            user_data=user_data,
+            job_post=job_post,
+            proposal_text=proposal_text,
+        )
+        fit_score = fit_result["fit_score"]
+        fit_breakdown = fit_result["breakdown"]
+
         proposal_data = {
             "proposal": proposal_text,
             "cover_letter": proposal_result.get("cover_letter", ""),
@@ -460,6 +625,7 @@ async def analyze_job_from_plugin(
             "source": "plugin_analyze",
             "status": "draft",
             "fit_score": fit_score,
+            "fit_breakdown": fit_breakdown,
             "analysis_keywords": deduped_keywords[:12],
             "analysis_strategy": strategy,
         }
@@ -468,6 +634,7 @@ async def analyze_job_from_plugin(
         return {
             "id": proposal_id,
             "fit_score": fit_score,
+            "breakdown": fit_breakdown,
             "keywords": deduped_keywords[:12],
             "strategy": strategy,
             "proposal": proposal_text,
@@ -857,6 +1024,33 @@ async def score_proposal(request: ProposalScoringRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to score proposal: {str(e)}"
+        )
+
+
+@router.post("/v1/feedback", status_code=status.HTTP_201_CREATED)
+async def create_feedback(request: FeedbackCreateRequest):
+    """Store user feedback for generated proposals."""
+    try:
+        if request.rating not in {1, -1}:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="rating must be 1 (good) or -1 (bad).",
+            )
+
+        firestore_client = _get_firestore()
+        feedback_id = firestore_client.save_feedback(
+            user_id=request.user_id,
+            proposal_id=request.proposal_id,
+            job_id=request.job_id,
+            rating=request.rating,
+        )
+        return {"success": True, "feedback_id": feedback_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to save feedback: {str(e)}",
         )
 
 

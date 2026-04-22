@@ -237,6 +237,22 @@
   margin: 0;
 }
 
+.fpo-breakdown-list {
+  margin-top: 8px;
+}
+
+.fpo-feedback-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.fpo-btn.is-active {
+  border: 1px solid rgba(37, 99, 235, 0.45);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
 .fpo-status {
   margin-top: 8px;
   font-size: 12px;

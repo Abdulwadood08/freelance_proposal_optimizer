@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, FormEvent, useEffect } from "react";
-import { generateProposal, type ProposalResponse } from "@/lib/api";
+import { generateProposal, generateImprovedProposal, type ProposalResponse } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import styles from "./ProposalForm.module.css";
 
@@ -43,6 +43,7 @@ export default function ProposalForm({ onProposalGenerated }: ProposalFormProps)
     "professional" | "friendly" | "confident" | "balanced"
   >("professional");
   const [proposalLength, setProposalLength] = useState<"short" | "medium" | "long">("medium");
+  const [autoImprove, setAutoImprove] = useState(true);
 
   useEffect(() => {
     if (!currentUser) {
@@ -58,17 +59,29 @@ export default function ProposalForm({ onProposalGenerated }: ProposalFormProps)
     setMessage(null);
 
     try {
-      const result = await generateProposal(
-        {
-          user_id: currentUser.uid,
-          job_post: jobPost,
-          preferred_tone: preferredTone,
-          proposal_length: proposalLength,
-        },
-        currentUser
-      );
+      const requestPayload = {
+        user_id: currentUser.uid,
+        job_post: jobPost,
+        preferred_tone: preferredTone,
+        proposal_length: proposalLength,
+      };
+      const result = autoImprove
+        ? await generateImprovedProposal(requestPayload, currentUser)
+        : await generateProposal(
+            requestPayload,
+            currentUser
+          );
       onProposalGenerated(result);
-      setMessage({ type: "success", text: "Proposal generated successfully!" });
+      if (autoImprove && result.improvement_attempted) {
+        setMessage({
+          type: "success",
+          text: `Auto-improve attempted (${result.score_before ?? "-"} -> ${result.score_after ?? "-"}). ${
+            result.improvement_applied ? "Improved draft applied." : "Original draft kept."
+          }`,
+        });
+      } else {
+        setMessage({ type: "success", text: "Proposal generated successfully!" });
+      }
     } catch (err: unknown) {
       setMessage({
         type: "error",
@@ -111,6 +124,16 @@ export default function ProposalForm({ onProposalGenerated }: ProposalFormProps)
           <span className={styles.exampleLabel}>Example:</span>
           <pre className={styles.exampleText}>{EXAMPLE}</pre>
         </div>
+
+        <label className={styles.improveToggle}>
+          <input
+            type="checkbox"
+            checked={autoImprove}
+            onChange={(e) => setAutoImprove(e.target.checked)}
+            disabled={loading || !currentUser}
+          />
+          <span>Auto-improve once using AI scoring feedback</span>
+        </label>
 
         <button
           type="submit"
