@@ -24,12 +24,22 @@ def _get_firestore():
 
 from app.services.llm_router import (
     get_analysis_client,
-    generate_proposal_with_routing,
     get_scoring_client,
 )
+from app.services.huggingface_client import get_huggingface_client
+from app.services.openai_client import get_openai_client
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def _generate_with_hf_primary_fallback_openai(**kwargs):
+    """Use HuggingFace/Ollama first, fallback to OpenAI on failure."""
+    try:
+        return get_huggingface_client().generate_proposal(**kwargs)
+    except Exception as hf_error:
+        logger.warning("HuggingFace/Ollama generation failed, using OpenAI fallback: %s", str(hf_error))
+        return get_openai_client().generate_proposal(**kwargs)
 
 
 class ProposalGenerateRequest(BaseModel):
@@ -203,8 +213,8 @@ async def generate_proposal(request: ProposalGenerateRequest):
         # Get winning patterns for personalization
         winning_patterns = firestore_client.get_winning_patterns(request.user_id)
         
-        # 2. Call configured generation provider (HuggingFace/OpenAI)
-        proposal_result = generate_proposal_with_routing(
+        # 2. Use HuggingFace/Ollama first and fallback to OpenAI
+        proposal_result = _generate_with_hf_primary_fallback_openai(
             user_skills=user_skills,
             case_studies=case_studies,
             job_post=request.job_post,
@@ -305,7 +315,7 @@ async def generate_proposal_from_plugin(
         case_studies = user_data.get("case_studies", [])
         winning_patterns = firestore_client.get_winning_patterns(user_id)
 
-        proposal_result = generate_proposal_with_routing(
+        proposal_result = _generate_with_hf_primary_fallback_openai(
             user_skills=user_skills,
             case_studies=case_studies,
             job_post=job_post,
@@ -385,7 +395,7 @@ async def analyze_job_from_plugin(
             user_case_studies=case_studies,
         )
 
-        proposal_result = generate_proposal_with_routing(
+        proposal_result = _generate_with_hf_primary_fallback_openai(
             user_skills=user_skills,
             case_studies=case_studies,
             job_post=job_post,
