@@ -390,14 +390,31 @@ async def generate_improved_proposal(request: ProposalGenerateRequest):
                 score_after = rescored
                 improvement_reason = "Improved draft rejected because score decreased."
 
+        preferred_tone_key = (
+            request.preferred_tone
+            if request.preferred_tone in {"professional", "friendly", "confident"}
+            else "professional"
+        )
+        base_tone_variations = base_result.get("tone_variations", {}) or {}
+        # Preserve model-provided tone variants; only update selected tone when rewrite is accepted.
+        tone_variations = {
+            "professional": base_tone_variations.get(
+                "professional", base_result.get("proposal", "")
+            ),
+            "friendly": base_tone_variations.get(
+                "friendly", base_result.get("proposal", "")
+            ),
+            "confident": base_tone_variations.get(
+                "confident", base_result.get("proposal", "")
+            ),
+        }
+        if improvement_applied:
+            tone_variations[preferred_tone_key] = final_proposal
+
         proposal_data = {
             "proposal": final_proposal,
             "cover_letter": final_proposal,
-            "tone_variations": {
-                "professional": final_proposal,
-                "friendly": final_proposal,
-                "confident": final_proposal,
-            },
+            "tone_variations": tone_variations,
             "job_post": request.job_post,
             "preferred_tone": request.preferred_tone or "professional",
             "proposal_length": request.proposal_length or "medium",
@@ -418,11 +435,7 @@ async def generate_improved_proposal(request: ProposalGenerateRequest):
             "id": proposal_id,
             "proposal": final_proposal,
             "cover_letter": final_proposal,
-            "tone_variations": {
-                "professional": final_proposal,
-                "friendly": final_proposal,
-                "confident": final_proposal,
-            },
+            "tone_variations": tone_variations,
             "job_post": request.job_post,
             "original_proposal": base_result.get("proposal", ""),
             "improved_proposal_candidate": improved_candidate,

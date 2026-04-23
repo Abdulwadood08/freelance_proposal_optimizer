@@ -96,6 +96,9 @@ IMPORTANT INSTRUCTIONS:
 - Proposal Length: {length_guideline}
 - The main proposal should match the preferred tone ({preferred_tone})
 - Still generate all three tone variations (professional, friendly, confident) for flexibility
+- Use proposal letter formatting:
+  - Start with "Dear Hiring Manager," (or "Dear Client,")
+  - End with a professional sign-off like "Best regards," followed by a freelancer name placeholder
 
 Generate a comprehensive proposal that:
 1. Highlights relevant skills that match the job requirements
@@ -103,6 +106,7 @@ Generate a comprehensive proposal that:
 3. Shows understanding of the client's needs
 4. Matches the preferred tone: {tone_description}
 5. Follows the length guideline: {length_guideline}
+6. Includes greeting and sign-off formatting
 
 Provide your response in the following JSON format:
 {{

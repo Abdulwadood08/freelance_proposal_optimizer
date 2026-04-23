@@ -298,6 +298,9 @@ Rewrite requirements:
 - Keep length around {length_hint}
 - Preserve truthful claims only
 - Strengthen hook, relevance, and call-to-action
+- Keep proposal letter formatting:
+  - Start with "Dear Hiring Manager," (or "Dear Client,")
+  - End with "Best regards," plus a freelancer name placeholder
 - Return ONLY the improved proposal text
 """
 
