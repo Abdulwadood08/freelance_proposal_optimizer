@@ -1,6 +1,6 @@
 const state = {
   job: null,
-  loading: false
+  loading: false,
 };
 
 const toneEl = document.getElementById("tone");
@@ -38,9 +38,24 @@ function renderJobPreview(job) {
     return;
   }
 
+  const client = job.clientName
+    ? `<p class="job-meta">Client: ${job.clientName}</p>`
+    : "";
+  const budget = job.budgetText
+    ? `<p class="job-meta">Budget: ${job.budgetText}</p>`
+    : "";
+  const props = job.proposalActivity
+    ? `<p class="job-meta">Activity: ${truncate(job.proposalActivity, 160)}</p>`
+    : "";
+  const skills =
+    Array.isArray(job.jobSkills) && job.jobSkills.length
+      ? `<p class="job-meta">Skills: ${truncate(job.jobSkills.slice(0, 12).join(", "), 200)}</p>`
+      : "";
+
   jobPreview.innerHTML = `
     <p class="job-title">${job.title || "Untitled Job"}</p>
-    <p class="job-description">${truncate(job.description || "No description found.")}</p>
+    ${client}${budget}${props}${skills}
+    <p class="job-description">${truncate(job.description || "No description found.", 320)}</p>
   `;
 }
 
@@ -124,7 +139,11 @@ async function tryReadTokenViaInjectedScript(tabId) {
           return "";
         };
 
-        return readFirebaseToken(window.localStorage) || readFirebaseToken(window.sessionStorage) || "";
+        return (
+          readFirebaseToken(window.localStorage) ||
+          readFirebaseToken(window.sessionStorage) ||
+          ""
+        );
       },
     });
     return result?.[0]?.result || "";
@@ -222,20 +241,28 @@ async function onGenerateProposal() {
     const backendBaseUrl = backendBaseUrlEl.value.trim();
     await storageSet({
       preferredTone: tone,
-      backendBaseUrl
+      backendBaseUrl,
     });
 
     const res = await fetch(`${backendBaseUrl}/plugin/generate-proposal`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${firebaseIdToken}`
+        Authorization: `Bearer ${firebaseIdToken}`,
       },
       body: JSON.stringify({
         job_title: state.job.title || "",
         job_description: state.job.description || "",
-        tone
-      })
+        job_url: state.job.url || "",
+        tone,
+        client_name: state.job.clientName || "",
+        job_skills: Array.isArray(state.job.jobSkills) ? state.job.jobSkills : [],
+        budget_display: state.job.budgetText || "",
+        proposal_activity: state.job.proposalActivity || "",
+        posted_time: state.job.postedTime || "",
+        experience_level: state.job.experienceLevel || "",
+        project_type_label: state.job.projectTypeLabel || "",
+      }),
     });
 
     if (!res.ok) {

@@ -1,8 +1,12 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, Fragment } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import AppToast, {
+  type ToastMessage,
+  useToastAutoDismiss,
+} from "@/components/shared/AppToast/AppToast";
 import styles from "./Signup.module.css";
 
 export default function Signup() {
@@ -10,23 +14,25 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const [error, setError] = useState("");
+  const [toast, setToast] = useState<ToastMessage>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const { signup, loginWithGoogle } = useAuth();
   const router = useRouter();
 
+  useToastAutoDismiss(toast, setToast);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError("");
+    setToast(null);
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setToast({ type: "error", text: "Passwords do not match" });
       return;
     }
 
     if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+      setToast({ type: "error", text: "Password must be at least 6 characters" });
       return;
     }
 
@@ -36,27 +42,28 @@ export default function Signup() {
       await signup(email, password);
       router.push("/");
     } catch (err: any) {
-      setError(err.message || "Failed to create account");
+      setToast({ type: "error", text: err.message || "Failed to create account" });
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
-    setError("");
+    setToast(null);
     setGoogleLoading(true);
 
     try {
       await loginWithGoogle(rememberMe);
       router.push("/");
     } catch (err: any) {
-      setError(err.message || "Failed to sign in with Google");
+      setToast({ type: "error", text: err.message || "Failed to sign in with Google" });
     } finally {
       setGoogleLoading(false);
     }
   };
 
   return (
+    <Fragment>
     <div className={styles.container}>
       {/* Left Side - Signup Form */}
       <div className={styles.leftSide}>
@@ -67,8 +74,6 @@ export default function Signup() {
           </div>
 
           <h1 className={styles.title}>Sign up</h1>
-
-          {error && <div className={styles.error}>{error}</div>}
 
           <form onSubmit={handleSubmit} className={styles.form}>
             <div className={styles.formGroup}>
@@ -237,5 +242,7 @@ export default function Signup() {
         </div>
       </div>
     </div>
+    <AppToast message={toast} onDismiss={() => setToast(null)} />
+    </Fragment>
   );
 }

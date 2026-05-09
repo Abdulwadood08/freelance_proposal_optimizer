@@ -43,7 +43,7 @@
   color: var(--dashboard-subtitle);
 }
 
-/* ----- Profile Strength ----- */
+/* ----- Profile completion ----- */
 .strengthSection {
   margin-bottom: 2rem;
 }
@@ -73,7 +73,32 @@
   height: 100%;
   border-radius: 999px;
   background: linear-gradient(90deg, #8a2be2, #4169e1);
-  transition: width 0.3s ease;
+  transition: width 0.35s ease;
+}
+
+.progressIndeterminate {
+  height: 100%;
+  width: 40%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #8a2be2, #4169e1);
+  animation: profileProgressPulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes profileProgressPulse {
+  from {
+    transform: translateX(0);
+    opacity: 0.65;
+  }
+  to {
+    transform: translateX(150%);
+    opacity: 1;
+  }
+}
+
+.checklistHint {
+  font-size: 0.8125rem;
+  color: var(--dashboard-subtitle);
+  margin: 0 0 1rem 0;
 }
 
 .progressLabel {
@@ -245,10 +270,90 @@
   color: var(--text-secondary);
 }
 
+.uploadZoneHasFile {
+  padding: 1.25rem 1rem;
+  text-align: center;
+}
+
+.resumeFileTile {
+  position: relative;
+  margin: 0 auto;
+  max-width: 260px;
+  padding: 1rem 0.75rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+.resumeFileRemove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  font-size: 1.35rem;
+  line-height: 1;
+  color: #fff;
+  background: rgba(220, 53, 69, 0.92);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    transform 0.15s;
+}
+
+.resumeFileRemove:hover {
+  background: #dc3545;
+  transform: scale(1.06);
+}
+
+.resumeFileBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0.35rem 0 0.65rem;
+}
+
+.pdfBadgeSvg {
+  width: 56px;
+  height: auto;
+  display: block;
+}
+
+.resumeFileBadgeDoc svg {
+  width: 52px;
+  height: 52px;
+  stroke: var(--dashboard-subtitle);
+}
+
+.uploadPreviewFileName {
+  font-size: 0.875rem;
+  color: var(--dashboard-subtitle);
+  margin: 0;
+  text-align: center;
+  word-break: break-word;
+}
+
+.uploadPreviewHint {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin: 0;
+  text-align: center;
+}
+
 .uploadBtnRow {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 0.5rem;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
 }
 
 .uploadBtn {
@@ -265,6 +370,44 @@
 
 .uploadBtn:hover {
   opacity: 0.9;
+}
+
+.uploadBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.extractBtn {
+  padding: 0.5rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid rgba(138, 43, 226, 0.45);
+  background: transparent;
+  color: var(--dashboard-title);
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    background 0.2s;
+}
+
+.extractBtn:hover:not(:disabled) {
+  border-color: #8a2be2;
+  background: rgba(138, 43, 226, 0.08);
+  color: #e8dcff;
+}
+
+.extractBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.resumeParsingHint {
+  font-size: 0.8125rem;
+  color: var(--dashboard-subtitle);
+  line-height: 1.45;
+  margin: 0.5rem 0 0;
 }
 
 /* Work experience */
@@ -415,6 +558,19 @@
   margin-bottom: 0;
 }
 
+.suggestionStatus {
+  font-size: 0.8125rem;
+  color: var(--dashboard-subtitle);
+  margin-bottom: 0.75rem;
+}
+
+.suggestionError {
+  font-size: 0.8125rem;
+  color: #f87171;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+
 .traitRow {
   margin-bottom: 1rem;
 }
@@ -443,6 +599,25 @@
   transition: width 0.3s ease;
 }
 
+.traitFillIndeterminate {
+  height: 100%;
+  width: 38%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #4169e1, #8a2be2);
+  animation: traitBarPulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes traitBarPulse {
+  from {
+    transform: translateX(0);
+    opacity: 0.55;
+  }
+  to {
+    transform: translateX(170%);
+    opacity: 1;
+  }
+}
+
 .saveProfileBtn {
   width: 100%;
   padding: 0.875rem 1.5rem;
@@ -464,26 +639,6 @@
 .saveProfileBtn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-/* Messages */
-.message {
-  padding: 0.875rem 1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-  font-size: 0.875rem;
-}
-
-.messageSuccess {
-  background: rgba(16, 185, 129, 0.12);
-  color: #065f46;
-  border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-.messageError {
-  background: rgba(239, 68, 68, 0.1);
-  color: #991b1b;
-  border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 /* Form inputs (name, etc.) – used in modal or inline */
@@ -595,33 +750,8 @@
   margin-top: 0.35rem;
 }
 
-.fileUploadOption {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-}
-
 .fileInput {
   display: none;
-}
-
-.fileUploadLabel {
-  cursor: pointer;
-  font-size: 0.875rem;
-  color: #8a2be2;
-}
-
-.fileName {
-  font-size: 0.8125rem;
-  color: var(--dashboard-subtitle);
-}
-
-.orDivider {
-  text-align: center;
-  color: var(--text-secondary);
-  font-size: 0.8125rem;
-  margin: 0.5rem 0;
 }
 
 .caseStudyText {

@@ -21,6 +21,22 @@ async function getAuthHeaders(user: FirebaseUser | null): Promise<HeadersInit> {
   return headers;
 }
 
+async function getApiErrorMessage(
+  response: Response,
+  fallback: string,
+): Promise<string> {
+  try {
+    const body = await response.json();
+    if (typeof body?.detail === "string") return body.detail;
+    if (Array.isArray(body?.detail)) {
+      return body.detail.map((d: unknown) => JSON.stringify(d)).join("; ");
+    }
+    return fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export interface User {
   user_id: string;
   name: string;
@@ -69,6 +85,7 @@ export interface GenerateProposalRequest {
   preferred_tone?: "professional" | "friendly" | "confident" | "balanced";
   proposal_length?: "short" | "medium" | "long";
 }
+export type ProposalTone = "professional" | "friendly" | "confident";
 
 // User API
 export async function createUser(
@@ -124,6 +141,76 @@ export async function updateUser(
   return response.json();
 }
 
+export interface ProfileSuggestionsRequest {
+  user_id: string;
+  name: string;
+  email: string;
+  skills: string[];
+  case_studies: unknown[];
+  resume_present: boolean;
+  upwork_profile: string;
+  portfolio_links: string[];
+  work_experience: Array<{ title?: string; company?: string; period?: string }>;
+}
+
+export interface ResumeExtractResponse {
+  full_name: string;
+  skills: string[];
+  work_experience: Array<{ title?: string; company?: string; period?: string }>;
+  projects: Array<{ title?: string; description?: string }>;
+  links: {
+    linkedin?: string;
+    github?: string;
+    portfolio?: string;
+    upwork?: string;
+  };
+  professional_summary?: string;
+}
+
+export async function extractResumeProfile(
+  file: File,
+  firebaseUser: FirebaseUser | null,
+): Promise<ResumeExtractResponse> {
+  const token = await getAuthToken(firebaseUser);
+  const headers: HeadersInit = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  const fd = new FormData();
+  fd.append("file", file);
+  const response = await fetch(`${API_BASE_URL}/v1/profile/extract-resume`, {
+    method: "POST",
+    headers,
+    body: fd,
+  });
+  if (!response.ok) {
+    const msg = await getApiErrorMessage(response, "Could not parse résumé");
+    throw new Error(msg);
+  }
+  return response.json();
+}
+
+export async function fetchProfileSuggestions(
+  payload: ProfileSuggestionsRequest,
+  firebaseUser: FirebaseUser | null,
+): Promise<{ suggestions: string[] }> {
+  const response = await fetch(`${API_BASE_URL}/v1/profile/suggestions`, {
+    method: "POST",
+    headers: await getAuthHeaders(firebaseUser),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const msg = await getApiErrorMessage(
+      response,
+      "Failed to load profile suggestions",
+    );
+    throw new Error(msg);
+  }
+
+  return response.json();
+}
+
 // Proposal API
 export async function generateProposal(
   request: GenerateProposalRequest,
@@ -143,29 +230,24 @@ export async function generateProposal(
   return response.json();
 }
 
-export interface ImprovedProposalResponse extends ProposalResponse {
-  original_proposal?: string;
-  improved_proposal_candidate?: string;
-  score_before?: number;
-  score_after?: number;
-  improvement_attempted?: boolean;
-  improvement_applied?: boolean;
-  improvement_reason?: string;
-}
-
-export async function generateImprovedProposal(
-  request: GenerateProposalRequest,
+export async function generateProposalToneVariation(
+  proposalId: string,
+  userId: string,
+  tone: ProposalTone,
   firebaseUser: FirebaseUser | null,
-): Promise<ImprovedProposalResponse> {
-  const response = await fetch(`${API_BASE_URL}/v1/proposals/generate-improved`, {
-    method: "POST",
-    headers: await getAuthHeaders(firebaseUser),
-    body: JSON.stringify(request),
-  });
+): Promise<ProposalResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/v1/proposals/${proposalId}/tone`,
+    {
+      method: "POST",
+      headers: await getAuthHeaders(firebaseUser),
+      body: JSON.stringify({ user_id: userId, tone }),
+    },
+  );
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.detail || "Failed to generate improved proposal");
+    throw new Error(error.detail || "Failed to generate tone variation");
   }
 
   return response.json();
@@ -482,8 +564,19 @@ export interface ProposalAnalytics {
   tone_stats: Record<string, number>;
   length_stats: Record<string, number>;
   avg_score?: number;
+  score_sample_size?: number;
   feedback_positive_rate?: number;
   total_feedback?: number;
+  monthly_activity?: Array<{
+    month_key: string;
+    label: string;
+    generated: number;
+    won: number;
+  }>;
+  /** Month-over-month % change for proposals created (latest vs prior month). */
+  mom_generated_pct?: number | null;
+  /** Wins in latest month minus wins in prior month. */
+  mom_won_delta?: number | null;
   recent_activity?: Array<{
     proposal_id?: string;
     status: string;

@@ -1,8 +1,12 @@
 "use client";
 
-import { useState, FormEvent, useEffect } from "react";
-import { generateProposal, generateImprovedProposal, type ProposalResponse } from "@/lib/api";
+import { useState, FormEvent, useEffect, Fragment } from "react";
+import { generateProposal, type ProposalResponse } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import AppToast, {
+  type ToastMessage,
+  useToastAutoDismiss,
+} from "@/components/shared/AppToast/AppToast";
 import styles from "./ProposalForm.module.css";
 
 const SparkleIcon = () => (
@@ -31,25 +35,30 @@ interface ProposalFormProps {
   onProposalGenerated: (proposal: ProposalResponse) => void;
 }
 
-export default function ProposalForm({ onProposalGenerated }: ProposalFormProps) {
+export default function ProposalForm({
+  onProposalGenerated,
+}: ProposalFormProps) {
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
+  const [message, setMessage] = useState<ToastMessage>(null);
   const [jobPost, setJobPost] = useState("");
   const [preferredTone, setPreferredTone] = useState<
     "professional" | "friendly" | "confident" | "balanced"
   >("professional");
-  const [proposalLength, setProposalLength] = useState<"short" | "medium" | "long">("medium");
-  const [autoImprove, setAutoImprove] = useState(true);
+  const [proposalLength, setProposalLength] = useState<
+    "short" | "medium" | "long"
+  >("medium");
 
   useEffect(() => {
     if (!currentUser) {
-      setMessage({ type: "error", text: "You must be logged in to generate proposals" });
+      setMessage({
+        type: "error",
+        text: "You must be logged in to generate proposals",
+      });
     }
   }, [currentUser]);
+
+  useToastAutoDismiss(message, setMessage);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -65,23 +74,12 @@ export default function ProposalForm({ onProposalGenerated }: ProposalFormProps)
         preferred_tone: preferredTone,
         proposal_length: proposalLength,
       };
-      const result = autoImprove
-        ? await generateImprovedProposal(requestPayload, currentUser)
-        : await generateProposal(
-            requestPayload,
-            currentUser
-          );
+      const result = await generateProposal(requestPayload, currentUser);
       onProposalGenerated(result);
-      if (autoImprove && result.improvement_attempted) {
-        setMessage({
-          type: "success",
-          text: `Auto-improve attempted (${result.score_before ?? "-"} -> ${result.score_after ?? "-"}). ${
-            result.improvement_applied ? "Improved draft applied." : "Original draft kept."
-          }`,
-        });
-      } else {
-        setMessage({ type: "success", text: "Proposal generated successfully!" });
-      }
+      setMessage({
+        type: "success",
+        text: "Proposal generated successfully!",
+      });
     } catch (err: unknown) {
       setMessage({
         type: "error",
@@ -93,22 +91,13 @@ export default function ProposalForm({ onProposalGenerated }: ProposalFormProps)
   };
 
   return (
-    <div className={styles.panel}>
+    <Fragment>
+      <div className={styles.panel}>
       <form onSubmit={handleSubmit}>
         <div className={styles.panelHeader}>
           <h2 className={styles.panelTitle}>Job Description</h2>
           <span className={styles.charCount}>{jobPost.length} characters</span>
         </div>
-
-        {message && (
-          <div
-            className={`${styles.message} ${
-              message.type === "success" ? styles.messageSuccess : styles.messageError
-            }`}
-          >
-            {message.text}
-          </div>
-        )}
 
         <textarea
           className={styles.textarea}
@@ -124,16 +113,6 @@ export default function ProposalForm({ onProposalGenerated }: ProposalFormProps)
           <span className={styles.exampleLabel}>Example:</span>
           <pre className={styles.exampleText}>{EXAMPLE}</pre>
         </div>
-
-        <label className={styles.improveToggle}>
-          <input
-            type="checkbox"
-            checked={autoImprove}
-            onChange={(e) => setAutoImprove(e.target.checked)}
-            disabled={loading || !currentUser}
-          />
-          <span>Auto-improve once using AI scoring feedback</span>
-        </label>
 
         <button
           type="submit"
@@ -153,6 +132,8 @@ export default function ProposalForm({ onProposalGenerated }: ProposalFormProps)
           )}
         </button>
       </form>
-    </div>
+      </div>
+      <AppToast message={message} onDismiss={() => setMessage(null)} />
+    </Fragment>
   );
 }

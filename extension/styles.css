@@ -89,7 +89,11 @@ textarea {
 button {
   cursor: pointer;
   border: none;
-  background: linear-gradient(135deg, var(--ext-accent-start), var(--ext-accent-end));
+  background: linear-gradient(
+    135deg,
+    var(--ext-accent-start),
+    var(--ext-accent-end)
+  );
   color: var(--ext-accent-text);
   font-weight: 400;
   margin-top: 8px;
@@ -125,7 +129,7 @@ button:disabled {
   border: 1px solid var(--ext-border);
   border-radius: 8px;
   padding: 8px;
-  max-height: 120px;
+  max-height: 200px;
   overflow: auto;
 }
 
@@ -142,6 +146,13 @@ button:disabled {
   font-size: 13px;
   font-weight: 400;
   color: var(--ext-text);
+}
+
+.job-meta {
+  margin: 2px 0;
+  font-size: 11px;
+  color: var(--ext-muted);
+  line-height: 1.35;
 }
 
 .job-description {

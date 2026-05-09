@@ -1,18 +1,24 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   type ProposalResponse,
+  type ProposalTone,
   updateProposal,
   createTemplate,
   scoreProposal,
   type ProposalScore,
   submitProposalFeedback,
+  generateProposalToneVariation,
 } from "@/lib/api";
 import { exportToPDF, exportToDOCX, exportToTXT } from "@/lib/export";
 import styles from "./ProposalDisplay.module.css";
 import Button from "@/components/shared/Button/Button";
+import AppToast, {
+  type ToastMessage,
+  useToastAutoDismiss,
+} from "@/components/shared/AppToast/AppToast";
 
 interface ProposalDisplayProps {
   proposal: ProposalResponse;
@@ -30,10 +36,7 @@ export default function ProposalDisplay({
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState("");
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
+  const [message, setMessage] = useState<ToastMessage>(null);
   const [proposalState, setProposalState] = useState<ProposalResponse | null>(
     proposal,
   );
@@ -48,6 +51,7 @@ export default function ProposalDisplay({
   const [showScore, setShowScore] = useState(false);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackValue, setFeedbackValue] = useState<1 | -1 | null>(null);
+  const [toneLoading, setToneLoading] = useState<ProposalTone | null>(null);
 
   useEffect(() => {
     setProposalState(proposal);
@@ -76,9 +80,18 @@ export default function ProposalDisplay({
     }
   }, [showExportMenu]);
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    alert("Copied to clipboard!");
+  useToastAutoDismiss(message, setMessage);
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setMessage({ type: "success", text: "Copied to clipboard." });
+    } catch {
+      setMessage({
+        type: "error",
+        text: "Could not copy. Try selecting the text manually.",
+      });
+    }
   };
 
   const getActiveContent = () => {
@@ -225,6 +238,47 @@ export default function ProposalDisplay({
     }
   };
 
+  const ensureToneVariation = async (tone: ProposalTone) => {
+    if (!currentUser || !proposalState?.id) {
+      setMessage({
+        type: "error",
+        text: "Please generate and save a proposal first.",
+      });
+      return;
+    }
+
+    const existingTone = (proposalState.tone_variations?.[tone] || "").trim();
+    if (existingTone) {
+      setActiveTone(tone);
+      return;
+    }
+
+    try {
+      setToneLoading(tone);
+      setMessage({ type: "success", text: `Generating ${tone} variation...` });
+      const updatedProposal = await generateProposalToneVariation(
+        proposalState.id,
+        currentUser.uid,
+        tone,
+        currentUser,
+      );
+      setProposalState(updatedProposal);
+      setActiveTone(tone);
+      setMessage({
+        type: "success",
+        text: `${tone.charAt(0).toUpperCase() + tone.slice(1)} variation generated.`,
+      });
+      if (onProposalUpdated) onProposalUpdated(updatedProposal);
+    } catch (error: any) {
+      setMessage({
+        type: "error",
+        text: error.message || `Failed to generate ${tone} variation`,
+      });
+    } finally {
+      setToneLoading(null);
+    }
+  };
+
   const buildJobId = () => {
     const raw = (proposalState?.job_post || "").trim();
     if (!raw) return proposalState?.id || "unknown-job";
@@ -335,6 +389,7 @@ export default function ProposalDisplay({
   }
 
   return (
+    <Fragment>
     <div className={styles.panel}>
       <div className={styles.panelHeader}>
         <h2 className={styles.panelTitle}>Generated Proposal</h2>
@@ -342,26 +397,28 @@ export default function ProposalDisplay({
           <button
             type="button"
             className={`${styles.tab} ${activeTone === "professional" ? styles.active : ""}`}
-            onClick={() => !isEditing && setActiveTone("professional")}
-            disabled={isEditing}
+            onClick={() => !isEditing && ensureToneVariation("professional")}
+            disabled={isEditing || toneLoading !== null}
           >
-            Professional
+            {toneLoading === "professional"
+              ? "Professional..."
+              : "Professional"}
           </button>
           <button
             type="button"
             className={`${styles.tab} ${activeTone === "friendly" ? styles.active : ""}`}
-            onClick={() => !isEditing && setActiveTone("friendly")}
-            disabled={isEditing}
+            onClick={() => !isEditing && ensureToneVariation("friendly")}
+            disabled={isEditing || toneLoading !== null}
           >
-            Friendly
+            {toneLoading === "friendly" ? "Friendly..." : "Friendly"}
           </button>
           <button
             type="button"
             className={`${styles.tab} ${activeTone === "confident" ? styles.active : ""}`}
-            onClick={() => !isEditing && setActiveTone("confident")}
-            disabled={isEditing}
+            onClick={() => !isEditing && ensureToneVariation("confident")}
+            disabled={isEditing || toneLoading !== null}
           >
-            Confident
+            {toneLoading === "confident" ? "Confident..." : "Confident"}
           </button>
         </div>
       </div>
@@ -421,14 +478,6 @@ export default function ProposalDisplay({
           >
             ✏️ Edit
           </Button>
-        </div>
-      )}
-
-      {message && (
-        <div
-          className={`${styles.message} ${styles[`message${message.type.charAt(0).toUpperCase() + message.type.slice(1)}`]}`}
-        >
-          {message.text}
         </div>
       )}
 
@@ -594,7 +643,9 @@ export default function ProposalDisplay({
             )}
 
             <div className={styles.feedbackRow}>
-              <h4 className={styles.feedbackTitle}>Was this proposal useful?</h4>
+              <h4 className={styles.feedbackTitle}>
+                Was this proposal useful?
+              </h4>
               <div className={styles.feedbackButtons}>
                 <button
                   type="button"
@@ -677,5 +728,7 @@ export default function ProposalDisplay({
         </div>
       )}
     </div>
+    <AppToast message={message} onDismiss={() => setMessage(null)} />
+    </Fragment>
   );
 }

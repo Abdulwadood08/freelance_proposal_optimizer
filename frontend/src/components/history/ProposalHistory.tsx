@@ -1,8 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { getUserProposals, updateProposalStatus, type Proposal } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import AppToast, {
+  type ToastMessage,
+  useToastAutoDismiss,
+} from "@/components/shared/AppToast/AppToast";
 import styles from "./ProposalHistory.module.css";
 
 const DocumentIcon = () => (
@@ -90,13 +94,15 @@ export default function ProposalHistory() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusUpdating, setStatusUpdating] = useState<Record<string, boolean>>({});
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [message, setMessage] = useState<ToastMessage>(null);
 
   useEffect(() => {
     if (currentUser) {
       loadProposals();
     }
   }, [currentUser]);
+
+  useToastAutoDismiss(message, setMessage);
 
   const loadProposals = async () => {
     if (!currentUser) return;
@@ -163,17 +169,12 @@ export default function ProposalHistory() {
   }
 
   return (
+    <Fragment>
     <div className={styles.container}>
       <header className={styles.header}>
         <h1 className={styles.title}>Proposal History</h1>
         <p className={styles.subtitle}>Track all your generated proposals and their status</p>
       </header>
-
-      {message && (
-        <div className={`${styles.banner} ${message.type === "success" ? styles.bannerSuccess : styles.bannerError}`}>
-          {message.text}
-        </div>
-      )}
 
       {proposals.length === 0 ? (
         <div className={styles.emptyState}>
@@ -237,5 +238,7 @@ export default function ProposalHistory() {
         </div>
       )}
     </div>
+    <AppToast message={message} onDismiss={() => setMessage(null)} />
+    </Fragment>
   );
 }

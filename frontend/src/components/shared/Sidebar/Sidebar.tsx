@@ -181,7 +181,7 @@ export default function Sidebar() {
               <LogoIcon />
             </div>
             <div className={styles.logoText}>
-              <span className={styles.logoTitle}>ProposalAI</span>
+              <span className={styles.logoTitle}>F.P.O</span>
               <span className={styles.logoSubtitle}>Smart Proposals</span>
             </div>
           </div>

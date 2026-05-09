@@ -1,11 +1,52 @@
 """Firestore client service for database operations."""
-import os
 import json
+import os
+from calendar import month_abbr
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
 from google.cloud import firestore
+from google.cloud.firestore_v1.aggregation import AggregationQuery
 from google.cloud.firestore_v1.base_query import FieldFilter
 from google.oauth2 import service_account
+
+
+def _coerce_to_datetime(val: Any) -> Optional[datetime]:
+    """Parse Firestore/datetime/string timestamps into a naive UTC datetime when possible."""
+    if val is None:
+        return None
+    if isinstance(val, datetime):
+        return val.replace(tzinfo=None) if val.tzinfo else val
+    if isinstance(val, str):
+        try:
+            return datetime.fromisoformat(val.replace("Z", "+00:00")).replace(tzinfo=None)
+        except Exception:
+            return None
+    if hasattr(val, "isoformat") and callable(getattr(val, "isoformat")):
+        try:
+            raw = val.isoformat()
+            if isinstance(raw, str):
+                return datetime.fromisoformat(raw.replace("Z", "+00:00")).replace(tzinfo=None)
+        except Exception:
+            return None
+    return None
+
+
+def _month_key_utc(dt: datetime) -> str:
+    return f"{dt.year:04d}-{dt.month:02d}"
+
+
+def _last_n_calendar_month_keys(n: int = 12) -> List[str]:
+    """Oldest-first keys like '2025-06', ending at current UTC month."""
+    now = datetime.utcnow()
+    y, m = now.year, now.month
+    keys_rev: List[str] = []
+    for _ in range(n):
+        keys_rev.append(f"{y:04d}-{m:02d}")
+        m -= 1
+        if m == 0:
+            m = 12
+            y -= 1
+    return list(reversed(keys_rev))
 
 
 def _make_json_serializable(obj: Any) -> Any:
@@ -177,6 +218,14 @@ class FirestoreClient:
         query = proposals_ref.where(
             filter=FieldFilter("user_id", "==", user_id)
         )
+        try:
+            agg_query = AggregationQuery(query)
+            agg_query.count(alias="total")
+            agg_results = agg_query.get()
+            if agg_results:
+                return int(agg_results[0].value)
+        except Exception:
+            pass
         return len(list(query.stream()))
     
     def get_proposal(self, proposal_id: str) -> Optional[Dict[str, Any]]:
@@ -330,15 +379,33 @@ class FirestoreClient:
             Dictionary with analytics data
         """
         proposals_ref = self.db.collection("proposals")
-        query = proposals_ref.where(
+        base_query = proposals_ref.where(
             filter=FieldFilter("user_id", "==", user_id)
         )
-        
-        proposals = []
-        for doc in query.stream():
-            proposal_data = doc.to_dict() or {}
-            proposal_data["id"] = doc.id
-            proposals.append(proposal_data)
+
+        proposals: List[Dict[str, Any]] = []
+        try:
+            stream_query = base_query.select(
+                "status",
+                "created_at",
+                "won_at",
+                "preferred_tone",
+                "proposal_length",
+                "score",
+                "quality_score",
+                "fit_score",
+                "source",
+            )
+            for doc in stream_query.stream():
+                proposal_data = doc.to_dict() or {}
+                proposal_data["id"] = doc.id
+                proposals.append(proposal_data)
+        except Exception:
+            # Projection can fail on some SDK/emulator setups — fall back to full reads.
+            for doc in base_query.stream():
+                proposal_data = doc.to_dict() or {}
+                proposal_data["id"] = doc.id
+                proposals.append(proposal_data)
         
         total = len(proposals)
         status_counts = {"draft": 0, "sent": 0, "won": 0, "lost": 0}
@@ -381,6 +448,57 @@ class FirestoreClient:
         response_rate = (total_responded / sent_count * 100) if sent_count > 0 else 0
 
         avg_score = round(sum(score_values) / len(score_values), 2) if score_values else 0.0
+        score_sample_size = len(score_values)
+
+        # Monthly activity (last 12 UTC calendar months)
+        month_keys = _last_n_calendar_month_keys(12)
+        generated_by_month: Dict[str, int] = {}
+        won_by_month: Dict[str, int] = {}
+        for mk in month_keys:
+            generated_by_month[mk] = 0
+            won_by_month[mk] = 0
+
+        for prop in proposals:
+            created = _coerce_to_datetime(prop.get("created_at"))
+            if created:
+                gk = _month_key_utc(created)
+                if gk in generated_by_month:
+                    generated_by_month[gk] += 1
+
+            if prop.get("status") == "won":
+                win_dt = _coerce_to_datetime(prop.get("won_at")) or _coerce_to_datetime(
+                    prop.get("created_at")
+                )
+                if win_dt:
+                    wk = _month_key_utc(win_dt)
+                    if wk in won_by_month:
+                        won_by_month[wk] += 1
+
+        monthly_activity: List[Dict[str, Any]] = []
+        for mk in month_keys:
+            mo = int(mk[5:7])
+            year_short = int(mk[:4]) % 100
+            label = f"{month_abbr[mo]} '{year_short:02d}"
+            monthly_activity.append(
+                {
+                    "month_key": mk,
+                    "label": label,
+                    "generated": generated_by_month.get(mk, 0),
+                    "won": won_by_month.get(mk, 0),
+                }
+            )
+
+        mom_generated_pct: Optional[float] = None
+        mom_won_delta: Optional[int] = None
+        if len(month_keys) >= 2:
+            cur_m, prev_m = month_keys[-1], month_keys[-2]
+            cur_g = generated_by_month.get(cur_m, 0)
+            prev_g = generated_by_month.get(prev_m, 0)
+            if prev_g > 0:
+                mom_generated_pct = round((cur_g - prev_g) / prev_g * 100, 1)
+            elif cur_g > 0 and prev_g == 0:
+                mom_generated_pct = None
+            mom_won_delta = won_by_month.get(cur_m, 0) - won_by_month.get(prev_m, 0)
 
         # Feedback metrics
         feedback_ref = self.db.collection("feedback")
@@ -415,22 +533,28 @@ class FirestoreClient:
         candidate_pool = won_proposals if won_proposals else proposals_sorted
         top_performing = None
         if candidate_pool:
-            top_performing = max(
+            top_row = max(
                 candidate_pool,
                 key=lambda p: (
                     float(p.get("fit_score") or (p.get("score", 0) * 10 if p.get("score") else 0)),
                     p.get("created_at") or "",
                 ),
             )
+            excerpt = ""
+            top_id = top_row.get("id")
+            if top_id:
+                full_top = self.get_proposal(top_id)
+                if full_top:
+                    excerpt = (full_top.get("proposal") or "")[:220]
             top_performing = {
-                "proposal_id": top_performing.get("id"),
-                "status": top_performing.get("status", "draft"),
-                "fit_score": top_performing.get("fit_score"),
-                "created_at": top_performing.get("created_at"),
-                "excerpt": (top_performing.get("proposal") or "")[:220],
+                "proposal_id": top_row.get("id"),
+                "status": top_row.get("status", "draft"),
+                "fit_score": top_row.get("fit_score"),
+                "created_at": top_row.get("created_at"),
+                "excerpt": excerpt,
             }
-        
-        return {
+
+        payload = {
             "total_proposals": total,
             "status_counts": status_counts,
             "win_rate": round(win_rate, 2),
@@ -441,11 +565,17 @@ class FirestoreClient:
             "tone_stats": tone_stats,
             "length_stats": length_stats,
             "avg_score": avg_score,
+            "score_sample_size": score_sample_size,
             "feedback_positive_rate": feedback_positive_rate,
             "total_feedback": total_feedback,
             "recent_activity": recent_activity,
             "top_performing_proposal": top_performing,
+            "monthly_activity": monthly_activity,
+            "mom_generated_pct": mom_generated_pct,
+            "mom_won_delta": mom_won_delta,
         }
+        # FastAPI JSON encoding fails on Firestore Timestamp / similar types without this pass.
+        return _make_json_serializable(payload)
     
     def get_winning_patterns(self, user_id: str) -> Dict[str, Any]:
         """

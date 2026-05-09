@@ -1,9 +1,10 @@
 """Proposal-related API endpoints."""
 import logging
+import os
 
 from fastapi import APIRouter, HTTPException, status, Query, Header
 from fastapi.encoders import jsonable_encoder
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
@@ -34,13 +35,120 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _generate_with_hf_primary_fallback_openai(**kwargs):
-    """Use HuggingFace/Ollama first, fallback to OpenAI on failure."""
+def _freelancer_display_name(user_data: Optional[dict]) -> Optional[str]:
+    if not user_data:
+        return None
+    name = (user_data.get("name") or user_data.get("full_name") or "").strip()
+    return name or None
+
+
+def _compose_plugin_job_post(
+    *,
+    job_title: str,
+    job_description: str,
+    job_url: Optional[str] = None,
+    client_name: Optional[str] = None,
+    job_skills: Optional[List[str]] = None,
+    budget_display: Optional[str] = None,
+    proposal_activity: Optional[str] = None,
+    posted_time: Optional[str] = None,
+    experience_level: Optional[str] = None,
+    project_type_label: Optional[str] = None,
+) -> str:
+    """Single enriched job-post string for prompts (public listing fields only)."""
+    title = (job_title or "").strip()
+    desc = (job_description or "").strip()
+    lines: List[str] = [f"Job Title: {title}", ""]
+    meta: List[str] = []
+
+    cn = (client_name or "").strip()
+    if cn:
+        meta.append(f"Client / listing label (public): {cn}")
+
+    bd = (budget_display or "").strip()
+    if bd:
+        meta.append(f"Budget / rate shown on listing: {bd}")
+
+    pt = (project_type_label or "").strip()
+    if pt:
+        meta.append(f"Engagement type (from listing): {pt}")
+
+    el = (experience_level or "").strip()
+    if el:
+        meta.append(f"Experience level (from listing): {el}")
+
+    pa = (proposal_activity or "").strip()
+    if pa:
+        meta.append(f"Proposal competition / activity (public): {pa}")
+
+    pst = (posted_time or "").strip()
+    if pst:
+        meta.append(f"Posted (relative): {pst}")
+
+    skills = [str(s).strip() for s in (job_skills or []) if str(s).strip()]
+    if skills:
+        bullet = "\n- ".join(skills[:45])
+        meta.append(f"Skills / tags visible on this job:\n- {bullet}")
+
+    if meta:
+        lines.append(
+            "PUBLIC JOB LISTING CONTEXT (factual fields only; do not infer private client data):"
+        )
+        lines.extend(meta)
+        lines.append("")
+
+    lines.append("Job Description:")
+    lines.append(desc)
+    lines.append("")
+    lines.append(
+        "PROPOSAL QUALITY: Mirror vocabulary from the title and description. "
+        "Naturally include listing skill tags when they honestly apply — no keyword stuffing or fabrication."
+    )
+
+    ju = (job_url or "").strip()
+    if ju:
+        lines.extend(["", f"Job URL: {ju}"])
+
+    return "\n".join(lines).strip()
+
+
+def _generate_proposal_dual_backend(**kwargs):
+    """
+    Prefer OpenAI for grounded proposals (set PROPOSAL_PROVIDER_ORDER=hf_first to reverse).
+
+    openai_first (default): OpenAI then HuggingFace/Ollama fallback.
+    hf_first: HuggingFace/Ollama then OpenAI fallback.
+    """
+    order = os.getenv("PROPOSAL_PROVIDER_ORDER", "openai_first").strip().lower()
+    if order == "hf_first":
+        try:
+            return get_huggingface_client().generate_proposal(**kwargs)
+        except Exception as hf_error:
+            logger.warning("HF/Ollama proposal failed, using OpenAI fallback: %s", hf_error)
+            return get_openai_client().generate_proposal(**kwargs)
     try:
-        return get_huggingface_client().generate_proposal(**kwargs)
-    except Exception as hf_error:
-        logger.warning("HuggingFace/Ollama generation failed, using OpenAI fallback: %s", str(hf_error))
         return get_openai_client().generate_proposal(**kwargs)
+    except Exception as oa_error:
+        logger.warning("OpenAI proposal failed, using HF/Ollama fallback: %s", oa_error)
+        return get_huggingface_client().generate_proposal(**kwargs)
+
+
+def _build_job_grounding_from_analysis(analysis_result: dict) -> Optional[str]:
+    parts: List[str] = []
+    summary = (analysis_result.get("job_summary") or "").strip()
+    if summary:
+        parts.append(f"- Job focus (stay aligned): {summary}")
+    for req in (analysis_result.get("key_requirements") or [])[:12]:
+        rs = str(req).strip()
+        if rs:
+            parts.append(f"- Requirement from posting: {rs}")
+    for sk in (analysis_result.get("relevant_skills") or [])[:10]:
+        ss = str(sk).strip()
+        if ss:
+            parts.append(f"- Matching skill you may emphasize if truthful: {ss}")
+    if not parts:
+        return None
+    return "\n".join(parts)
 
 
 class ProposalGenerateRequest(BaseModel):
@@ -115,6 +223,14 @@ class PluginGenerateProposalRequest(BaseModel):
     job_title: str
     job_description: str
     tone: Optional[str] = "professional"
+    job_url: Optional[str] = None
+    client_name: Optional[str] = None
+    job_skills: List[str] = Field(default_factory=list)
+    budget_display: Optional[str] = None
+    proposal_activity: Optional[str] = None
+    posted_time: Optional[str] = None
+    experience_level: Optional[str] = None
+    project_type_label: Optional[str] = None
 
 
 class PluginGenerateProposalResponse(BaseModel):
@@ -129,6 +245,13 @@ class PluginAnalyzeJobRequest(BaseModel):
     job_description: str
     job_url: Optional[str] = None
     tone: Optional[str] = "professional"
+    client_name: Optional[str] = None
+    job_skills: List[str] = Field(default_factory=list)
+    budget_display: Optional[str] = None
+    proposal_activity: Optional[str] = None
+    posted_time: Optional[str] = None
+    experience_level: Optional[str] = None
+    project_type_label: Optional[str] = None
 
 
 class PluginVariation(BaseModel):
@@ -146,6 +269,45 @@ class PluginAnalyzeJobResponse(BaseModel):
     strategy: str
     proposal: str
     variations: List[PluginVariation]
+
+
+class PluginRecommendBidRequest(BaseModel):
+    """Schema for extension bid recommendation."""
+    job_title: str
+    job_description: str
+    job_url: Optional[str] = None
+    tone: Optional[str] = "professional"
+    client_budget_text: Optional[str] = None
+    payment_type_hint: Optional[str] = None
+    risk_level: Optional[str] = "balanced"  # conservative, balanced, aggressive
+    client_name: Optional[str] = None
+    job_skills: List[str] = Field(default_factory=list)
+    budget_display: Optional[str] = None
+    proposal_activity: Optional[str] = None
+    posted_time: Optional[str] = None
+    experience_level: Optional[str] = None
+    project_type_label: Optional[str] = None
+
+
+class PluginRecommendBidResponse(BaseModel):
+    """Schema for extension bid recommendation response."""
+    payment_type: str
+    recommended_hourly_rate: Optional[float] = None
+    recommended_fixed_bid: Optional[float] = None
+    bid_range_low: Optional[float] = None
+    bid_range_high: Optional[float] = None
+    confidence: int
+    positioning: str
+    risk_flags: List[str]
+    why_this_bid: List[str]
+    negotiation_script: str
+    fit_score: int
+
+
+class ToneVariationGenerateRequest(BaseModel):
+    """Schema for on-demand tone generation."""
+    user_id: str
+    tone: str  # professional, friendly, confident
 
 
 class FeedbackCreateRequest(BaseModel):
@@ -234,14 +396,15 @@ async def generate_proposal(request: ProposalGenerateRequest):
         # Get winning patterns for personalization
         winning_patterns = firestore_client.get_winning_patterns(request.user_id)
         
-        # 2. Use HuggingFace/Ollama first and fallback to OpenAI
-        proposal_result = _generate_with_hf_primary_fallback_openai(
+        proposal_result = _generate_proposal_dual_backend(
             user_skills=user_skills,
             case_studies=case_studies,
             job_post=request.job_post,
             preferred_tone=request.preferred_tone or "professional",
             proposal_length=request.proposal_length or "medium",
-            winning_patterns=winning_patterns if winning_patterns else None
+            winning_patterns=winning_patterns if winning_patterns else None,
+            freelancer_display_name=_freelancer_display_name(user_data),
+            job_grounding_context=None,
         )
         
         # Validate the response structure
@@ -250,12 +413,18 @@ async def generate_proposal(request: ProposalGenerateRequest):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Invalid response format from OpenAI API"
             )
+        tone_variations = proposal_result.get("tone_variations") or {}
+        normalized_tone_variations = {
+            "professional": tone_variations.get("professional", ""),
+            "friendly": tone_variations.get("friendly", ""),
+            "confident": tone_variations.get("confident", ""),
+        }
         
         # 3. Save generated proposal to Firestore
         proposal_data = {
             "proposal": proposal_result["proposal"],
             "cover_letter": proposal_result["cover_letter"],
-            "tone_variations": proposal_result["tone_variations"],
+            "tone_variations": normalized_tone_variations,
             "job_post": request.job_post,
             "preferred_tone": request.preferred_tone or "professional",
             "proposal_length": request.proposal_length or "medium"
@@ -271,7 +440,7 @@ async def generate_proposal(request: ProposalGenerateRequest):
             "id": proposal_id,
             "proposal": proposal_result["proposal"],
             "cover_letter": proposal_result["cover_letter"],
-            "tone_variations": proposal_result["tone_variations"],
+            "tone_variations": normalized_tone_variations,
             "job_post": request.job_post  # Include job_post for scoring
         }
         return response_data
@@ -301,6 +470,96 @@ async def generate_proposal(request: ProposalGenerateRequest):
         )
 
 
+@router.post("/v1/proposals/{proposal_id}/tone", response_model=ProposalResponse)
+async def generate_tone_variation(proposal_id: str, request: ToneVariationGenerateRequest):
+    """Generate a specific tone variation only when requested by the user."""
+    try:
+        target_tone = (request.tone or "").strip().lower()
+        if target_tone not in {"professional", "friendly", "confident"}:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="tone must be one of: professional, friendly, confident",
+            )
+
+        firestore_client = _get_firestore()
+        proposal_doc = firestore_client.get_proposal(proposal_id)
+        if not proposal_doc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Proposal with id '{proposal_id}' not found",
+            )
+        if proposal_doc.get("user_id") != request.user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have permission to update this proposal",
+            )
+
+        user_data = firestore_client.get_user(request.user_id)
+        if not user_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"User with id '{request.user_id}' not found",
+            )
+
+        generated = _generate_proposal_dual_backend(
+            user_skills=user_data.get("skills", []),
+            case_studies=user_data.get("case_studies", []),
+            job_post=proposal_doc.get("job_post", ""),
+            preferred_tone=target_tone,
+            proposal_length=proposal_doc.get("proposal_length", "medium"),
+            winning_patterns=firestore_client.get_winning_patterns(request.user_id) or None,
+            freelancer_display_name=_freelancer_display_name(user_data),
+            job_grounding_context=None,
+        )
+        generated_text = (generated.get("proposal") or "").strip()
+        if not generated_text:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Tone generation returned empty proposal text.",
+            )
+
+        existing_tones = proposal_doc.get("tone_variations") or {}
+        updated_tones = {
+            "professional": existing_tones.get("professional", ""),
+            "friendly": existing_tones.get("friendly", ""),
+            "confident": existing_tones.get("confident", ""),
+        }
+        updated_tones[target_tone] = generated_text
+
+        update_data = {"tone_variations": updated_tones}
+        if target_tone == (proposal_doc.get("preferred_tone") or "professional"):
+            update_data["proposal"] = generated_text
+            update_data["cover_letter"] = generated_text
+            proposal_doc["proposal"] = generated_text
+            proposal_doc["cover_letter"] = generated_text
+
+        firestore_client.update_proposal(
+            proposal_id=proposal_id,
+            user_id=request.user_id,
+            proposal_data=update_data,
+        )
+
+        return {
+            "id": proposal_doc.get("id", proposal_id),
+            "proposal": proposal_doc.get("proposal", ""),
+            "cover_letter": proposal_doc.get("cover_letter", ""),
+            "tone_variations": updated_tones,
+            "job_post": proposal_doc.get("job_post"),
+        }
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate tone variation: {str(e)}",
+        )
+
+
 @router.post(
     "/v1/proposals/generate-improved",
     response_model=ProposalGenerateImprovedResponse,
@@ -323,13 +582,15 @@ async def generate_improved_proposal(request: ProposalGenerateRequest):
         case_studies = user_data.get("case_studies", [])
         winning_patterns = firestore_client.get_winning_patterns(request.user_id)
 
-        base_result = _generate_with_hf_primary_fallback_openai(
+        base_result = _generate_proposal_dual_backend(
             user_skills=user_skills,
             case_studies=case_studies,
             job_post=request.job_post,
             preferred_tone=request.preferred_tone or "professional",
             proposal_length=request.proposal_length or "medium",
             winning_patterns=winning_patterns if winning_patterns else None,
+            freelancer_display_name=_freelancer_display_name(user_data),
+            job_grounding_context=None,
         )
 
         if not all(k in base_result for k in ["proposal", "cover_letter", "tone_variations"]):
@@ -368,6 +629,7 @@ async def generate_improved_proposal(request: ProposalGenerateRequest):
                 suggestions=score_before_result.get("suggestions", []),
                 preferred_tone=request.preferred_tone or "professional",
                 target_length=request.proposal_length or "medium",
+                freelancer_display_name=_freelancer_display_name(user_data),
             )
             improved_candidate = improved_proposal
 
@@ -480,22 +742,33 @@ async def generate_proposal_from_plugin(
                 detail="User profile not found. Please complete your profile first.",
             )
 
-        job_post = (
-            f"Job Title: {request.job_title.strip()}\n\n"
-            f"Job Description:\n{request.job_description.strip()}"
+        budget_line = (request.budget_display or "").strip()
+        job_post = _compose_plugin_job_post(
+            job_title=request.job_title,
+            job_description=request.job_description,
+            job_url=request.job_url,
+            client_name=request.client_name,
+            job_skills=request.job_skills or [],
+            budget_display=budget_line or None,
+            proposal_activity=request.proposal_activity,
+            posted_time=request.posted_time,
+            experience_level=request.experience_level,
+            project_type_label=request.project_type_label,
         )
 
         user_skills = user_data.get("skills", [])
         case_studies = user_data.get("case_studies", [])
         winning_patterns = firestore_client.get_winning_patterns(user_id)
 
-        proposal_result = _generate_with_hf_primary_fallback_openai(
+        proposal_result = _generate_proposal_dual_backend(
             user_skills=user_skills,
             case_studies=case_studies,
             job_post=job_post,
             preferred_tone=request.tone or "professional",
             proposal_length="medium",
             winning_patterns=winning_patterns if winning_patterns else None,
+            freelancer_display_name=_freelancer_display_name(user_data),
+            job_grounding_context=None,
         )
 
         proposal_text = proposal_result.get("proposal", "").strip()
@@ -555,10 +828,18 @@ async def analyze_job_from_plugin(
         case_studies = user_data.get("case_studies", [])
         winning_patterns = firestore_client.get_winning_patterns(user_id)
 
-        job_post = (
-            f"Job Title: {request.job_title.strip()}\n\n"
-            f"Job Description:\n{request.job_description.strip()}\n\n"
-            f"Job URL: {(request.job_url or '').strip()}"
+        budget_line = (request.budget_display or "").strip()
+        job_post = _compose_plugin_job_post(
+            job_title=request.job_title,
+            job_description=request.job_description,
+            job_url=request.job_url,
+            client_name=request.client_name,
+            job_skills=request.job_skills or [],
+            budget_display=budget_line or None,
+            proposal_activity=request.proposal_activity,
+            posted_time=request.posted_time,
+            experience_level=request.experience_level,
+            project_type_label=request.project_type_label,
         )
 
         analysis_client = get_analysis_client()
@@ -569,13 +850,17 @@ async def analyze_job_from_plugin(
             user_case_studies=case_studies,
         )
 
-        proposal_result = _generate_with_hf_primary_fallback_openai(
+        job_grounding_context = _build_job_grounding_from_analysis(analysis_result)
+
+        proposal_result = _generate_proposal_dual_backend(
             user_skills=user_skills,
             case_studies=case_studies,
             job_post=job_post,
             preferred_tone=request.tone or "professional",
             proposal_length="medium",
             winning_patterns=winning_patterns if winning_patterns else None,
+            freelancer_display_name=_freelancer_display_name(user_data),
+            job_grounding_context=job_grounding_context,
         )
 
         relevant_skills = analysis_result.get("relevant_skills", []) or []
@@ -584,8 +869,11 @@ async def analyze_job_from_plugin(
         suggestions = analysis_result.get("suggestions", []) or []
         profile_gaps = analysis_result.get("profile_gaps", []) or []
 
-        keywords = key_requirements + relevant_skills
-        deduped_keywords = list(dict.fromkeys([str(k).strip() for k in keywords if str(k).strip()]))
+        listing_skill_tokens = [str(s).strip() for s in (request.job_skills or []) if str(s).strip()]
+        keywords = key_requirements + relevant_skills + listing_skill_tokens
+        deduped_keywords = list(dict.fromkeys([str(k).strip() for k in keywords if str(k).strip()]))[
+            :30
+        ]
 
         strategy_parts = []
         if analysis_result.get("job_summary"):
@@ -664,6 +952,94 @@ async def analyze_job_from_plugin(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to analyze plugin job: {str(e)}",
+        )
+
+
+@router.post("/plugin/recommend-bid", response_model=PluginRecommendBidResponse)
+async def recommend_bid_from_plugin(
+    request: PluginRecommendBidRequest,
+    authorization: Optional[str] = Header(default=None, alias="Authorization"),
+):
+    """Plugin endpoint: recommend a bid amount/range for the current job."""
+    try:
+        user_id = _get_user_id_from_bearer_token(authorization)
+        firestore_client = _get_firestore()
+
+        user_data = firestore_client.get_user(user_id)
+        if not user_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User profile not found. Please complete your profile first.",
+            )
+
+        user_skills = user_data.get("skills", [])
+        case_studies = user_data.get("case_studies", [])
+        budget_line = (request.budget_display or "").strip() or (
+            (request.client_budget_text or "").strip()
+        )
+        job_post = _compose_plugin_job_post(
+            job_title=request.job_title,
+            job_description=request.job_description,
+            job_url=request.job_url,
+            client_name=request.client_name,
+            job_skills=request.job_skills or [],
+            budget_display=budget_line or None,
+            proposal_activity=request.proposal_activity,
+            posted_time=request.posted_time,
+            experience_level=request.experience_level,
+            project_type_label=request.project_type_label,
+        )
+
+        analysis_client = get_analysis_client()
+        analysis_result = analysis_client.analyze_job_post(
+            job_post=job_post,
+            user_skills=user_skills,
+            user_case_studies=case_studies,
+        )
+        fit_result = calculate_fit_score(
+            relevant_skills=analysis_result.get("relevant_skills", []) or [],
+            missing_skills=analysis_result.get("missing_skills", []) or [],
+            key_requirements=analysis_result.get("key_requirements", []) or [],
+            user_data=user_data,
+            job_post=job_post,
+            proposal_text="",
+        )
+        fit_score = fit_result["fit_score"]
+
+        bid = get_openai_client().recommend_bid(
+            job_post=job_post,
+            user_skills=user_skills,
+            fit_score=fit_score,
+            tone=request.tone or "professional",
+            client_budget_text=request.client_budget_text or "",
+            payment_type_hint=request.payment_type_hint or "",
+            risk_level=request.risk_level or "balanced",
+        )
+
+        return {
+            "payment_type": bid.get("payment_type", "hourly"),
+            "recommended_hourly_rate": bid.get("recommended_hourly_rate"),
+            "recommended_fixed_bid": bid.get("recommended_fixed_bid"),
+            "bid_range_low": bid.get("bid_range_low"),
+            "bid_range_high": bid.get("bid_range_high"),
+            "confidence": bid.get("confidence", 65),
+            "positioning": bid.get("positioning", ""),
+            "risk_flags": bid.get("risk_flags", []),
+            "why_this_bid": bid.get("why_this_bid", []),
+            "negotiation_script": bid.get("negotiation_script", ""),
+            "fit_score": fit_score,
+        }
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to recommend bid: {str(e)}",
         )
 
 
@@ -922,7 +1298,7 @@ async def get_proposal_analytics(user_id: str):
     try:
         firestore_client = _get_firestore()
         analytics = firestore_client.get_proposal_analytics(user_id)
-        return analytics
+        return jsonable_encoder(analytics)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -1,23 +1,29 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, Fragment } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import AppToast, {
+  type ToastMessage,
+  useToastAutoDismiss,
+} from '@/components/shared/AppToast/AppToast';
 import styles from './Login.module.css';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const [error, setError] = useState('');
+  const [toast, setToast] = useState<ToastMessage>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const { login, loginWithGoogle } = useAuth();
   const router = useRouter();
 
+  useToastAutoDismiss(toast, setToast);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError('');
+    setToast(null);
     setLoading(true);
 
     try {
@@ -25,14 +31,14 @@ export default function Login() {
       // Dashboard will check if profile exists and redirect to onboarding if needed
       router.push('/');
     } catch (err: any) {
-      setError(err.message || 'Failed to log in');
+      setToast({ type: 'error', text: err.message || 'Failed to log in' });
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
-    setError('');
+    setToast(null);
     setGoogleLoading(true);
 
     try {
@@ -40,13 +46,14 @@ export default function Login() {
       // Dashboard will check if profile exists and redirect to onboarding if needed
       router.push('/');
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in with Google');
+      setToast({ type: 'error', text: err.message || 'Failed to sign in with Google' });
     } finally {
       setGoogleLoading(false);
     }
   };
 
   return (
+    <Fragment>
     <div className={styles.container}>
       {/* Left Side - Login Form */}
       <div className={styles.leftSide}>
@@ -57,8 +64,6 @@ export default function Login() {
           </div>
 
           <h1 className={styles.title}>Sign in</h1>
-
-          {error && <div className={styles.error}>{error}</div>}
 
           <form onSubmit={handleSubmit} className={styles.form}>
             <div className={styles.formGroup}>
@@ -195,5 +200,7 @@ export default function Login() {
         </div>
       </div>
     </div>
+    <AppToast message={toast} onDismiss={() => setToast(null)} />
+    </Fragment>
   );
 }

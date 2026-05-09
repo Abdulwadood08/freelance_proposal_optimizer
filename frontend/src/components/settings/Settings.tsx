@@ -1,7 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import AppToast, {
+  type ToastMessage,
+  useToastAutoDismiss,
+} from "@/components/shared/AppToast/AppToast";
 import styles from "./Settings.module.css";
 
 const PersonIcon = () => (
@@ -25,7 +29,7 @@ export default function Settings() {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [proposalAlerts, setProposalAlerts] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [message, setMessage] = useState<ToastMessage>(null);
 
   useEffect(() => {
     if (currentUser) {
@@ -33,6 +37,8 @@ export default function Settings() {
       loadUserProfile();
     }
   }, [currentUser]);
+
+  useToastAutoDismiss(message, setMessage);
 
   const loadUserProfile = async () => {
     if (!currentUser) return;
@@ -85,17 +91,12 @@ export default function Settings() {
   };
 
   return (
+    <Fragment>
     <div className={styles.container}>
       <header className={styles.header}>
         <h1 className={styles.title}>Settings</h1>
         <p className={styles.subtitle}>Manage your account preferences</p>
       </header>
-
-      {message && (
-        <div className={`${styles.message} ${message.type === "success" ? styles.messageSuccess : styles.messageError}`}>
-          {message.text}
-        </div>
-      )}
 
       {/* Profile Settings Card */}
       <div className={styles.card}>
@@ -184,5 +185,7 @@ export default function Settings() {
         </div>
       </div>
     </div>
+    <AppToast message={message} onDismiss={() => setMessage(null)} />
+    </Fragment>
   );
 }

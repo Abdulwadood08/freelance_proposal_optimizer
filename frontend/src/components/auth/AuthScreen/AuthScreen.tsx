@@ -1,8 +1,12 @@
 "use client";
 
-import { useState, FormEvent, useEffect } from "react";
+import { useState, FormEvent, useEffect, Fragment } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import AppToast, {
+  type ToastMessage,
+  useToastAutoDismiss,
+} from "@/components/shared/AppToast/AppToast";
 import styles from "./AuthScreen.module.css";
 
 const LogoIcon = () => (
@@ -49,24 +53,29 @@ export default function AuthScreen({ initialMode }: AuthScreenProps) {
     setMode(pathname?.includes("/signup") ? "signup" : "login");
   }, [pathname]);
 
+  const [toast, setToast] = useState<ToastMessage>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
+  useToastAutoDismiss(toast, setToast);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError("");
+    setToast(null);
 
     if (mode === "signup") {
       if (password !== confirmPassword) {
-        setError("Passwords do not match");
+        setToast({ type: "error", text: "Passwords do not match" });
         return;
       }
       if (password.length < 6) {
-        setError("Password must be at least 6 characters");
+        setToast({
+          type: "error",
+          text: "Password must be at least 6 characters",
+        });
         return;
       }
     }
@@ -80,26 +89,35 @@ export default function AuthScreen({ initialMode }: AuthScreenProps) {
       }
       router.push("/");
     } catch (err: unknown) {
-      setError((err as Error).message || (mode === "login" ? "Failed to sign in" : "Failed to create account"));
+      setToast({
+        type: "error",
+        text:
+          (err as Error).message ||
+          (mode === "login" ? "Failed to sign in" : "Failed to create account"),
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
-    setError("");
+    setToast(null);
     setGoogleLoading(true);
     try {
       await loginWithGoogle(false);
       router.push("/");
     } catch (err: unknown) {
-      setError((err as Error).message || "Failed to sign in with Google");
+      setToast({
+        type: "error",
+        text: (err as Error).message || "Failed to sign in with Google",
+      });
     } finally {
       setGoogleLoading(false);
     }
   };
 
   return (
+    <Fragment>
     <div className={styles.wrapper}>
       <div className={styles.glow} aria-hidden />
       <div className={styles.glowRight} aria-hidden />
@@ -131,8 +149,6 @@ export default function AuthScreen({ initialMode }: AuthScreenProps) {
             Sign Up
           </button>
         </div>
-
-        {error && <div className={styles.error}>{error}</div>}
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.formGroup}>
@@ -238,5 +254,7 @@ export default function AuthScreen({ initialMode }: AuthScreenProps) {
         </a>
       </p>
     </div>
+    <AppToast message={toast} onDismiss={() => setToast(null)} />
+    </Fragment>
   );
 }

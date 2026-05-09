@@ -1,0 +1,114 @@
+/* Fixed toast — matches Profile Builder notification style */
+
+.toastViewport {
+  position: fixed;
+  top: max(1rem, env(safe-area-inset-top));
+  right: max(1rem, env(safe-area-inset-right));
+  left: auto;
+  z-index: 10050;
+  max-width: min(400px, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding: 0.875rem 0.6rem 0.875rem 1rem;
+  border-radius: 12px;
+  background: linear-gradient(
+    145deg,
+    rgba(30, 28, 42, 0.97),
+    rgba(22, 21, 32, 0.98)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.25),
+    0 18px 44px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(14px);
+  animation: appToastIn 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes appToastIn {
+  from {
+    opacity: 0;
+    transform: translateX(14px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
+}
+
+.toastSuccess {
+  border-left: 4px solid #34d399;
+}
+
+.toastError {
+  border-left: 4px solid #f87171;
+}
+
+.toastBody {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.toastGlyph {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.toastSuccess .toastGlyph {
+  color: #34d399;
+}
+
+.toastError .toastGlyph {
+  color: #f87171;
+}
+
+.toastMessage {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  font-weight: 500;
+  color: #eae8f2;
+  word-break: break-word;
+}
+
+.toastDismiss {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  margin: -2px -2px -2px 0;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.toastDismiss:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.88);
+}

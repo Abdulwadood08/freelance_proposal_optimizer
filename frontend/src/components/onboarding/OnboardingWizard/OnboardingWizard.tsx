@@ -1,12 +1,16 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import { createUser, getUser } from '@/lib/api';
-import styles from './OnboardingWizard.module.css';
-import Card from '@/components/shared/Card/Card';
-import Button from '@/components/shared/Button/Button';
+import { useState, useEffect, Fragment } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { createUser, getUser } from "@/lib/api";
+import AppToast, {
+  type ToastMessage,
+  useToastAutoDismiss,
+} from "@/components/shared/AppToast/AppToast";
+import styles from "./OnboardingWizard.module.css";
+import Card from "@/components/shared/Card/Card";
+import Button from "@/components/shared/Button/Button";
 
 interface CaseStudy {
   title: string;
@@ -23,43 +27,45 @@ export default function OnboardingWizard() {
   const { currentUser } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [toast, setToast] = useState<ToastMessage>(null);
 
   // Form data
   const [formData, setFormData] = useState({
-    user_id: '',
-    name: '',
-    email: '',
+    user_id: "",
+    name: "",
+    email: "",
     skills: [] as string[],
     case_studies: [] as (string | CaseStudy)[],
-    resume_url: '',
-    upwork_profile: '',
+    resume_url: "",
+    upwork_profile: "",
     fiverr_gigs: [] as string[],
   });
 
   // Step-specific inputs
-  const [skillInput, setSkillInput] = useState('');
-  const [caseStudyInput, setCaseStudyInput] = useState('');
+  const [skillInput, setSkillInput] = useState("");
+  const [caseStudyInput, setCaseStudyInput] = useState("");
   const [showCaseStudyForm, setShowCaseStudyForm] = useState(false);
   const [newCaseStudy, setNewCaseStudy] = useState<CaseStudy>({
-    title: '',
-    description: '',
-    achievements: '',
+    title: "",
+    description: "",
+    achievements: "",
     technologies: [],
-    duration: '',
+    duration: "",
   });
-  const [techInput, setTechInput] = useState('');
+  const [techInput, setTechInput] = useState("");
 
   // Initialize with user data
   useEffect(() => {
     if (currentUser) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         user_id: currentUser.uid,
-        email: currentUser.email || '',
+        email: currentUser.email || "",
       }));
     }
   }, [currentUser]);
+
+  useToastAutoDismiss(toast, setToast);
 
   // Check if user already has profile
   useEffect(() => {
@@ -68,7 +74,7 @@ export default function OnboardingWizard() {
       try {
         const user = await getUser(currentUser.uid, currentUser);
         // User already has profile, redirect to dashboard
-        router.push('/');
+        router.push("/");
       } catch {
         // No profile exists, continue with onboarding
       }
@@ -78,77 +84,100 @@ export default function OnboardingWizard() {
 
   const addSkill = () => {
     if (skillInput.trim() && !formData.skills.includes(skillInput.trim())) {
-      setFormData({ ...formData, skills: [...formData.skills, skillInput.trim()] });
-      setSkillInput('');
+      setFormData({
+        ...formData,
+        skills: [...formData.skills, skillInput.trim()],
+      });
+      setSkillInput("");
     }
   };
 
   const removeSkill = (skill: string) => {
-    setFormData({ ...formData, skills: formData.skills.filter(s => s !== skill) });
+    setFormData({
+      ...formData,
+      skills: formData.skills.filter((s) => s !== skill),
+    });
   };
 
   const addCaseStudy = () => {
-    if (caseStudyInput.trim() && !formData.case_studies.some(cs => 
-      typeof cs === 'string' ? cs === caseStudyInput.trim() : cs.title === caseStudyInput.trim()
-    )) {
-      setFormData({ ...formData, case_studies: [...formData.case_studies, caseStudyInput.trim()] });
-      setCaseStudyInput('');
+    if (
+      caseStudyInput.trim() &&
+      !formData.case_studies.some((cs) =>
+        typeof cs === "string"
+          ? cs === caseStudyInput.trim()
+          : cs.title === caseStudyInput.trim(),
+      )
+    ) {
+      setFormData({
+        ...formData,
+        case_studies: [...formData.case_studies, caseStudyInput.trim()],
+      });
+      setCaseStudyInput("");
     }
   };
 
   const removeCaseStudy = (index: number) => {
-    setFormData({ 
-      ...formData, 
-      case_studies: formData.case_studies.filter((_, i) => i !== index) 
+    setFormData({
+      ...formData,
+      case_studies: formData.case_studies.filter((_, i) => i !== index),
     });
   };
 
   const addTechToCaseStudy = () => {
-    if (techInput.trim() && !newCaseStudy.technologies?.includes(techInput.trim())) {
+    if (
+      techInput.trim() &&
+      !newCaseStudy.technologies?.includes(techInput.trim())
+    ) {
       setNewCaseStudy({
         ...newCaseStudy,
-        technologies: [...(newCaseStudy.technologies || []), techInput.trim()]
+        technologies: [...(newCaseStudy.technologies || []), techInput.trim()],
       });
-      setTechInput('');
+      setTechInput("");
     }
   };
 
   const removeTechFromCaseStudy = (tech: string) => {
     setNewCaseStudy({
       ...newCaseStudy,
-      technologies: newCaseStudy.technologies?.filter(t => t !== tech) || []
+      technologies: newCaseStudy.technologies?.filter((t) => t !== tech) || [],
     });
   };
 
   const saveStructuredCaseStudy = () => {
     if (!newCaseStudy.title.trim() || !newCaseStudy.description.trim()) {
-      setError('Title and description are required');
+      setToast({ type: "error", text: "Title and description are required" });
       return;
     }
-    
-    setFormData({ 
-      ...formData, 
-      case_studies: [...formData.case_studies, { ...newCaseStudy }] 
+
+    setFormData({
+      ...formData,
+      case_studies: [...formData.case_studies, { ...newCaseStudy }],
     });
     setNewCaseStudy({
-      title: '',
-      description: '',
-      achievements: '',
+      title: "",
+      description: "",
+      achievements: "",
       technologies: [],
-      duration: '',
+      duration: "",
     });
     setShowCaseStudyForm(false);
-    setError('');
+    setToast(null);
   };
 
   const addFiverrGig = (gig: string) => {
     if (gig.trim() && !formData.fiverr_gigs.includes(gig.trim())) {
-      setFormData({ ...formData, fiverr_gigs: [...formData.fiverr_gigs, gig.trim()] });
+      setFormData({
+        ...formData,
+        fiverr_gigs: [...formData.fiverr_gigs, gig.trim()],
+      });
     }
   };
 
   const removeFiverrGig = (gig: string) => {
-    setFormData({ ...formData, fiverr_gigs: formData.fiverr_gigs.filter(g => g !== gig) });
+    setFormData({
+      ...formData,
+      fiverr_gigs: formData.fiverr_gigs.filter((g) => g !== gig),
+    });
   };
 
   const validateStep = (step: number): boolean => {
@@ -168,10 +197,10 @@ export default function OnboardingWizard() {
 
   const handleNext = () => {
     if (!validateStep(currentStep)) {
-      setError(getValidationError(currentStep));
+      setToast({ type: "error", text: getValidationError(currentStep) });
       return;
     }
-    setError('');
+    setToast(null);
     if (currentStep < TOTAL_STEPS) {
       setCurrentStep(currentStep + 1);
     } else {
@@ -182,7 +211,7 @@ export default function OnboardingWizard() {
   const handleBack = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
-      setError('');
+      setToast(null);
     }
   };
 
@@ -197,16 +226,19 @@ export default function OnboardingWizard() {
 
   const handleComplete = async () => {
     if (!currentUser) return;
-    
+
     setLoading(true);
-    setError('');
+    setToast(null);
 
     try {
       await createUser(formData, currentUser);
       // Redirect to dashboard with success
-      router.push('/?onboarding=complete');
+      router.push("/?onboarding=complete");
     } catch (err: any) {
-      setError(err.message || 'Failed to save profile');
+      setToast({
+        type: "error",
+        text: err.message || "Failed to save profile",
+      });
     } finally {
       setLoading(false);
     }
@@ -215,56 +247,57 @@ export default function OnboardingWizard() {
   const getValidationError = (step: number): string => {
     switch (step) {
       case 1:
-        return 'Please enter your name';
+        return "Please enter your name";
       case 2:
-        return 'Please add at least one skill';
+        return "Please add at least one skill";
       case 3:
-        return 'Please add at least one case study';
+        return "Please add at least one case study";
       default:
-        return 'Please complete this step';
+        return "Please complete this step";
     }
   };
 
   const getStepTitle = (step: number): string => {
     switch (step) {
       case 1:
-        return 'Welcome! Let\'s get started';
+        return "Welcome! Let's get started";
       case 2:
-        return 'Tell us about your skills';
+        return "Tell us about your skills";
       case 3:
-        return 'Share your experience';
+        return "Share your experience";
       case 4:
-        return 'Optional information';
+        return "Optional information";
       default:
-        return '';
+        return "";
     }
   };
 
   const getStepDescription = (step: number): string => {
     switch (step) {
       case 1:
-        return 'We\'ll use this information to create personalized proposals for you.';
+        return "We'll use this information to create personalized proposals for you.";
       case 2:
-        return 'Add your key skills. These help us match you with relevant job posts.';
+        return "Add your key skills. These help us match you with relevant job posts.";
       case 3:
-        return 'Add case studies or projects you\'ve worked on. This helps create more compelling proposals.';
+        return "Add case studies or projects you've worked on. This helps create more compelling proposals.";
       case 4:
-        return 'You can add these later if you want. Let\'s finish up!';
+        return "You can add these later if you want. Let's finish up!";
       default:
-        return '';
+        return "";
     }
   };
 
   const progress = (currentStep / TOTAL_STEPS) * 100;
 
   return (
+    <Fragment>
     <div className={styles.wizardContainer}>
       <div className={styles.wizardContent}>
         {/* Progress Bar */}
         <div className={styles.progressContainer}>
           <div className={styles.progressBar}>
-            <div 
-              className={styles.progressFill} 
+            <div
+              className={styles.progressFill}
               style={{ width: `${progress}%` }}
             ></div>
           </div>
@@ -276,12 +309,10 @@ export default function OnboardingWizard() {
         <Card className={styles.wizardCard}>
           <div className={styles.stepHeader}>
             <h1 className={styles.stepTitle}>{getStepTitle(currentStep)}</h1>
-            <p className={styles.stepDescription}>{getStepDescription(currentStep)}</p>
+            <p className={styles.stepDescription}>
+              {getStepDescription(currentStep)}
+            </p>
           </div>
-
-          {error && (
-            <div className={styles.errorMessage}>{error}</div>
-          )}
 
           {/* Step 1: Basic Info */}
           {currentStep === 1 && (
@@ -292,7 +323,9 @@ export default function OnboardingWizard() {
                   type="text"
                   className={styles.input}
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   placeholder="John Doe"
                   required
                 />
@@ -305,9 +338,14 @@ export default function OnboardingWizard() {
                   className={styles.input}
                   value={formData.email}
                   disabled
-                  style={{ backgroundColor: 'var(--bg-secondary)', cursor: 'not-allowed' }}
+                  style={{
+                    backgroundColor: "var(--bg-secondary)",
+                    cursor: "not-allowed",
+                  }}
                 />
-                <small className={styles.helpText}>Email is managed by your account</small>
+                <small className={styles.helpText}>
+                  Email is managed by your account
+                </small>
               </div>
             </div>
           )}
@@ -317,13 +355,20 @@ export default function OnboardingWizard() {
             <div className={styles.stepContent}>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Add Your Skills *</label>
-                <p className={styles.helpText}>Add at least 3-5 skills for best results</p>
-                
+                <p className={styles.helpText}>
+                  Add at least 3-5 skills for best results
+                </p>
+
                 <div className={styles.tagInput}>
                   {formData.skills.map((skill, index) => (
                     <span key={index} className={styles.tag}>
                       {skill}
-                      <span className={styles.tagRemove} onClick={() => removeSkill(skill)}>×</span>
+                      <span
+                        className={styles.tagRemove}
+                        onClick={() => removeSkill(skill)}
+                      >
+                        ×
+                      </span>
                     </span>
                   ))}
                   <input
@@ -331,7 +376,7 @@ export default function OnboardingWizard() {
                     value={skillInput}
                     onChange={(e) => setSkillInput(e.target.value)}
                     onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
+                      if (e.key === "Enter") {
                         e.preventDefault();
                         addSkill();
                       }
@@ -340,7 +385,12 @@ export default function OnboardingWizard() {
                     className={styles.tagInputField}
                   />
                 </div>
-                <Button type="button" variant="secondary" onClick={addSkill} className={styles.addButton}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={addSkill}
+                  className={styles.addButton}
+                >
                   Add Skill
                 </Button>
               </div>
@@ -352,25 +402,39 @@ export default function OnboardingWizard() {
             <div className={styles.stepContent}>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Add Case Studies *</label>
-                <p className={styles.helpText}>Add at least one project or case study</p>
-                
+                <p className={styles.helpText}>
+                  Add at least one project or case study
+                </p>
+
                 {/* Existing case studies */}
                 {formData.case_studies.length > 0 && (
                   <div className={styles.caseStudiesList}>
                     {formData.case_studies.map((study, index) => (
                       <div key={index} className={styles.caseStudyCard}>
-                        {typeof study === 'string' ? (
+                        {typeof study === "string" ? (
                           <>
                             <span>{study}</span>
-                            <span className={styles.tagRemove} onClick={() => removeCaseStudy(index)}>×</span>
+                            <span
+                              className={styles.tagRemove}
+                              onClick={() => removeCaseStudy(index)}
+                            >
+                              ×
+                            </span>
                           </>
                         ) : (
                           <>
                             <div className={styles.caseStudyHeader}>
                               <strong>{study.title}</strong>
-                              <span className={styles.tagRemove} onClick={() => removeCaseStudy(index)}>×</span>
+                              <span
+                                className={styles.tagRemove}
+                                onClick={() => removeCaseStudy(index)}
+                              >
+                                ×
+                              </span>
                             </div>
-                            <p className={styles.caseStudyDescription}>{study.description}</p>
+                            <p className={styles.caseStudyDescription}>
+                              {study.description}
+                            </p>
                           </>
                         )}
                       </div>
@@ -385,7 +449,7 @@ export default function OnboardingWizard() {
                     value={caseStudyInput}
                     onChange={(e) => setCaseStudyInput(e.target.value)}
                     onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
+                      if (e.key === "Enter") {
                         e.preventDefault();
                         addCaseStudy();
                       }
@@ -394,18 +458,23 @@ export default function OnboardingWizard() {
                     className={styles.tagInputField}
                   />
                 </div>
-                <Button type="button" variant="secondary" onClick={addCaseStudy} className={styles.addButton}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={addCaseStudy}
+                  className={styles.addButton}
+                >
                   Add Simple Case Study
                 </Button>
 
                 {/* Detailed form */}
-                <Button 
-                  type="button" 
-                  variant="secondary" 
-                  onClick={() => setShowCaseStudyForm(!showCaseStudyForm)} 
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setShowCaseStudyForm(!showCaseStudyForm)}
                   className={styles.addButton}
                 >
-                  {showCaseStudyForm ? 'Cancel' : '+ Add Detailed Case Study'}
+                  {showCaseStudyForm ? "Cancel" : "+ Add Detailed Case Study"}
                 </Button>
 
                 {showCaseStudyForm && (
@@ -416,7 +485,12 @@ export default function OnboardingWizard() {
                         type="text"
                         className={styles.input}
                         value={newCaseStudy.title}
-                        onChange={(e) => setNewCaseStudy({ ...newCaseStudy, title: e.target.value })}
+                        onChange={(e) =>
+                          setNewCaseStudy({
+                            ...newCaseStudy,
+                            title: e.target.value,
+                          })
+                        }
                         placeholder="E-commerce Platform"
                       />
                     </div>
@@ -425,7 +499,12 @@ export default function OnboardingWizard() {
                       <textarea
                         className={styles.textarea}
                         value={newCaseStudy.description}
-                        onChange={(e) => setNewCaseStudy({ ...newCaseStudy, description: e.target.value })}
+                        onChange={(e) =>
+                          setNewCaseStudy({
+                            ...newCaseStudy,
+                            description: e.target.value,
+                          })
+                        }
                         placeholder="Describe the project..."
                         rows={3}
                       />
@@ -436,7 +515,12 @@ export default function OnboardingWizard() {
                         {newCaseStudy.technologies?.map((tech, i) => (
                           <span key={i} className={styles.tag}>
                             {tech}
-                            <span className={styles.tagRemove} onClick={() => removeTechFromCaseStudy(tech)}>×</span>
+                            <span
+                              className={styles.tagRemove}
+                              onClick={() => removeTechFromCaseStudy(tech)}
+                            >
+                              ×
+                            </span>
                           </span>
                         ))}
                         <input
@@ -444,7 +528,7 @@ export default function OnboardingWizard() {
                           value={techInput}
                           onChange={(e) => setTechInput(e.target.value)}
                           onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
+                            if (e.key === "Enter") {
                               e.preventDefault();
                               addTechToCaseStudy();
                             }
@@ -454,7 +538,11 @@ export default function OnboardingWizard() {
                         />
                       </div>
                     </div>
-                    <Button type="button" variant="primary" onClick={saveStructuredCaseStudy}>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      onClick={saveStructuredCaseStudy}
+                    >
                       Save Case Study
                     </Button>
                   </div>
@@ -472,18 +560,24 @@ export default function OnboardingWizard() {
                   type="url"
                   className={styles.input}
                   value={formData.resume_url}
-                  onChange={(e) => setFormData({ ...formData, resume_url: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, resume_url: e.target.value })
+                  }
                   placeholder="https://example.com/resume.pdf"
                 />
               </div>
 
               <div className={styles.formGroup}>
-                <label className={styles.label}>Upwork Profile URL (Optional)</label>
+                <label className={styles.label}>
+                  Upwork Profile URL (Optional)
+                </label>
                 <input
                   type="url"
                   className={styles.input}
                   value={formData.upwork_profile}
-                  onChange={(e) => setFormData({ ...formData, upwork_profile: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, upwork_profile: e.target.value })
+                  }
                   placeholder="https://www.upwork.com/freelancers/..."
                 />
               </div>
@@ -494,17 +588,22 @@ export default function OnboardingWizard() {
                   {formData.fiverr_gigs.map((gig, index) => (
                     <span key={index} className={styles.tag}>
                       {gig}
-                      <span className={styles.tagRemove} onClick={() => removeFiverrGig(gig)}>×</span>
+                      <span
+                        className={styles.tagRemove}
+                        onClick={() => removeFiverrGig(gig)}
+                      >
+                        ×
+                      </span>
                     </span>
                   ))}
                   <input
                     type="text"
                     onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
+                      if (e.key === "Enter") {
                         e.preventDefault();
                         const target = e.target as HTMLInputElement;
                         addFiverrGig(target.value);
-                        target.value = '';
+                        target.value = "";
                       }
                     }}
                     placeholder="Add Fiverr gig URL and press Enter"
@@ -518,21 +617,21 @@ export default function OnboardingWizard() {
           {/* Navigation Buttons */}
           <div className={styles.navigation}>
             {currentStep > 1 && (
-              <Button 
-                type="button" 
-                variant="secondary" 
+              <Button
+                type="button"
+                variant="secondary"
                 onClick={handleBack}
                 disabled={loading}
               >
                 ← Back
               </Button>
             )}
-            
+
             <div className={styles.navigationRight}>
               {currentStep === 4 && (
-                <Button 
-                  type="button" 
-                  variant="secondary" 
+                <Button
+                  type="button"
+                  variant="secondary"
                   onClick={handleSkip}
                   disabled={loading}
                   className={styles.skipButton}
@@ -540,19 +639,24 @@ export default function OnboardingWizard() {
                   Skip
                 </Button>
               )}
-              <Button 
-                type="button" 
-                variant="primary" 
+              <Button
+                type="button"
+                variant="primary"
                 onClick={handleNext}
                 disabled={loading}
               >
-                {loading ? 'Saving...' : currentStep === TOTAL_STEPS ? 'Complete Setup' : 'Next →'}
+                {loading
+                  ? "Saving..."
+                  : currentStep === TOTAL_STEPS
+                    ? "Complete Setup"
+                    : "Next →"}
               </Button>
             </div>
           </div>
         </Card>
       </div>
     </div>
+    <AppToast message={toast} onDismiss={() => setToast(null)} />
+    </Fragment>
   );
 }
-
