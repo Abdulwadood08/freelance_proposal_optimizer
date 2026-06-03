@@ -597,12 +597,13 @@ function extractUpworkJobData() {
   };
 }
 
-function buildPluginJobBody(job, tone) {
+function buildPluginJobBody(job, tone, proposalLength) {
   return {
     job_title: job.title || "",
     job_description: job.description || "",
     job_url: job.url || "",
     tone: tone || FPO_DEFAULT_TONE,
+    proposal_length: proposalLength || "medium",
     client_name: job.clientName || "",
     job_skills: Array.isArray(job.jobSkills) ? job.jobSkills : [],
     budget_display: job.budgetText || "",
@@ -703,9 +704,9 @@ function createPanelTemplate() {
     </div>
     <div class="fpo-panel__content">
       <section class="fpo-section">
-        <label class="fpo-label" for="fpoTone">Tone</label>
+        <label class="fpo-label" for="fpoTone">Proposal tone</label>
         <select class="fpo-select" id="fpoTone">
-          <option value="professional">Professional</option>
+          <option value="professional" selected>Professional</option>
           <option value="friendly">Friendly</option>
           <option value="confident">Confident</option>
           <option value="balanced">Balanced</option>
@@ -713,12 +714,22 @@ function createPanelTemplate() {
       </section>
 
       <section class="fpo-section">
-        <label class="fpo-label" for="fpoRiskLevel">Bid Risk Level</label>
+        <label class="fpo-label" for="fpoLength">Proposal length</label>
+        <select class="fpo-select" id="fpoLength">
+          <option value="short">Short</option>
+          <option value="medium" selected>Medium</option>
+          <option value="long">Long</option>
+        </select>
+      </section>
+
+      <section class="fpo-section">
+        <label class="fpo-label" for="fpoRiskLevel">Bid competitiveness</label>
         <select class="fpo-select" id="fpoRiskLevel">
           <option value="conservative">Conservative</option>
           <option value="balanced" selected>Balanced</option>
-          <option value="aggressive">Aggressive</option>
+          <option value="aggressive">Competitive (higher bid)</option>
         </select>
+        <p class="fpo-hint">Affects bid suggestion only, not proposal wording.</p>
       </section>
 
       <section class="fpo-section">
@@ -732,16 +743,17 @@ function createPanelTemplate() {
       <section class="fpo-section">
         <h3>Fit Score</h3>
         <p class="fpo-fit-score" id="fpoFitScore">-</p>
-        <ul class="fpo-list fpo-breakdown-list" id="fpoFitBreakdown"><li>Generate to view breakdown.</li></ul>
+        <p class="fpo-fit-breakdown" id="fpoFitBreakdown"></p>
+        <p class="fpo-fit-note">
+          Weighted blend of skill overlap, profile vs. job text signals, requirement coverage,
+          and draft length/structure (rules on the server). Regenerate keeps the same job
+          analysis so the score stays stable; only the draft slice may shift slightly.
+        </p>
       </section>
 
       <section class="fpo-section">
         <h3>Bid Recommendation</h3>
         <p class="fpo-text" id="fpoBidHeadline">Generate to view bid guidance.</p>
-        <div class="fpo-row" style="margin-top:8px;">
-          <button class="fpo-btn fpo-btn--muted" id="fpoApplyBidBtn">Apply Bid to Upwork</button>
-          <button class="fpo-btn fpo-btn--muted" id="fpoCopyNegotiationBtn">Copy Negotiation Line</button>
-        </div>
       </section>
 
       <section class="fpo-section">
@@ -758,7 +770,10 @@ function createPanelTemplate() {
         <h3>Personalized Proposal</h3>
         <textarea class="fpo-textarea" id="fpoProposal" placeholder="Generated proposal appears here..."></textarea>
         <div class="fpo-row" style="margin-top:8px;">
+          <button class="fpo-btn fpo-btn--muted" id="fpoShortenBtn">Make shorter</button>
           <button class="fpo-btn fpo-btn--muted" id="fpoCopyBtn">Copy Proposal</button>
+        </div>
+        <div class="fpo-row fpo-row--full" style="margin-top:8px;">
           <button class="fpo-btn fpo-btn--muted" id="fpoInsertBtn">Insert in Upwork</button>
         </div>
         <div class="fpo-feedback-row">
@@ -822,11 +837,11 @@ function setupInPageAssistant() {
 
   const closeBtn = panel.querySelector("#fpoCloseBtn");
   const toneEl = panel.querySelector("#fpoTone");
+  const lengthEl = panel.querySelector("#fpoLength");
   const riskLevelEl = panel.querySelector("#fpoRiskLevel");
   const generateBtn = panel.querySelector("#fpoGenerateBtn");
   const regenerateBtn = panel.querySelector("#fpoRegenerateBtn");
-  const applyBidBtn = panel.querySelector("#fpoApplyBidBtn");
-  const copyNegotiationBtn = panel.querySelector("#fpoCopyNegotiationBtn");
+  const shortenBtn = panel.querySelector("#fpoShortenBtn");
   const copyBtn = panel.querySelector("#fpoCopyBtn");
   const insertBtn = panel.querySelector("#fpoInsertBtn");
   const proposalEl = panel.querySelector("#fpoProposal");
@@ -841,8 +856,9 @@ function setupInPageAssistant() {
   const feedbackBadBtn = panel.querySelector("#fpoFeedbackBad");
   let lastProposalId = "";
   let lastJobId = "";
+  let lastAnalysisCache = null;
+  let lastJobPayload = null;
   let activeFeedback = 0;
-  let lastBidAdvice = null;
 
   function setStatus(text, isError = false) {
     statusEl.textContent = text;
@@ -852,22 +868,32 @@ function setupInPageAssistant() {
   function setLoading(loading) {
     generateBtn.disabled = loading;
     regenerateBtn.disabled = loading;
+    shortenBtn.disabled = loading;
     copyBtn.disabled = loading;
     insertBtn.disabled = loading;
-    applyBidBtn.disabled = loading;
-    copyNegotiationBtn.disabled = loading;
     feedbackGoodBtn.disabled = loading;
     feedbackBadBtn.disabled = loading;
   }
 
+  function formatFitBreakdown(breakdown) {
+    if (!breakdown || typeof breakdown !== "object") return "";
+    const parts = [];
+    if (breakdown.skills != null) parts.push(`Skills ${breakdown.skills}`);
+    if (breakdown.experience != null) parts.push(`Experience ${breakdown.experience}`);
+    if (breakdown.requirements != null) {
+      parts.push(`Requirements ${breakdown.requirements}`);
+    }
+    if (breakdown.proposal != null) parts.push(`Draft ${breakdown.proposal}`);
+    return parts.length ? parts.join(" · ") : "";
+  }
+
   function setEmptyState() {
     fitScoreEl.textContent = "-";
-    fitBreakdownEl.innerHTML = "<li>Generate to view breakdown.</li>";
+    fitBreakdownEl.textContent = "";
     strategyEl.textContent = "No strategy yet.";
     keywordsEl.innerHTML = "<li>Generate to view keywords.</li>";
     variationsEl.innerHTML = "<li>No variations yet.</li>";
     bidHeadlineEl.textContent = "Generate to view bid guidance.";
-    lastBidAdvice = null;
     proposalEl.value = "";
     lastProposalId = "";
     activeFeedback = 0;
@@ -876,8 +902,15 @@ function setupInPageAssistant() {
   }
 
   async function loadPrefs() {
-    const prefs = await storageGet(["preferredTone", "firebaseIdToken"]);
+    const prefs = await storageGet([
+      "preferredTone",
+      "preferredProposalLength",
+      "firebaseIdToken",
+    ]);
     toneEl.value = prefs.preferredTone || FPO_DEFAULT_TONE;
+    if (lengthEl && prefs.preferredProposalLength) {
+      lengthEl.value = prefs.preferredProposalLength;
+    }
 
     // Try to refresh token from page storage first; useful if user is logged in on same origin.
     const pageToken = extractFirebaseTokenFromPageStorage();
@@ -894,17 +927,11 @@ function setupInPageAssistant() {
 
   function renderResult(result) {
     fitScoreEl.textContent = `${result.fit_score ?? "-"}%`;
+    fitBreakdownEl.textContent = formatFitBreakdown(result.breakdown);
+    if (result.analysis_cache) {
+      lastAnalysisCache = result.analysis_cache;
+    }
     strategyEl.textContent = result.strategy || "No strategy generated.";
-    const breakdown = result.breakdown || {};
-    const breakdownItems = [
-      `Skills: ${breakdown.skills ?? "-"}`,
-      `Experience: ${breakdown.experience ?? "-"}`,
-      `Requirements: ${breakdown.requirements ?? "-"}`,
-      `Proposal: ${breakdown.proposal ?? "-"}`,
-    ];
-    fitBreakdownEl.innerHTML = breakdownItems
-      .map((item) => `<li>${item}</li>`)
-      .join("");
 
     const keywords = Array.isArray(result.keywords) ? result.keywords : [];
     keywordsEl.innerHTML = keywords.length
@@ -943,104 +970,6 @@ function setupInPageAssistant() {
     const rangeText =
       low != null && high != null ? ` (range: $${low} - $${high})` : "";
     bidHeadlineEl.textContent = `${recommendation}${rangeText} | Confidence: ${confidence}%`;
-    lastBidAdvice = {
-      paymentType,
-      recommendedHourlyRate: result.recommended_hourly_rate,
-      recommendedFixedBid: result.recommended_fixed_bid,
-      negotiationScript: result.negotiation_script || "",
-    };
-  }
-
-  function _setInputValue(input, value) {
-    const normalized = String(value ?? "").trim();
-    const setter = Object.getOwnPropertyDescriptor(
-      window.HTMLInputElement.prototype,
-      "value",
-    )?.set;
-    if (setter) {
-      setter.call(input, normalized);
-    } else {
-      input.value = normalized;
-    }
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-    input.dispatchEvent(new Event("blur", { bubbles: true }));
-  }
-
-  function _findVisibleInput(selectors) {
-    for (const selector of selectors) {
-      const inputs = [...document.querySelectorAll(selector)];
-      for (const el of inputs) {
-        const input = el;
-        const style = window.getComputedStyle(input);
-        const isVisible =
-          style.display !== "none" &&
-          style.visibility !== "hidden" &&
-          input.offsetParent !== null;
-        if (isVisible) return input;
-      }
-    }
-    return null;
-  }
-
-  function _findBidInput(paymentType) {
-    if (paymentType === "fixed") {
-      return _findVisibleInput([
-        "input[data-test*='fixed']",
-        "input[data-test*='FixedPrice']",
-        "input[data-test*='amount']",
-        "input[name*='amount']",
-        "input[aria-label*='Amount']",
-        "input[aria-label*='Fixed']",
-        "input[placeholder*='$']",
-      ]);
-    }
-    return _findVisibleInput([
-      "input[data-test='hourly-rate-input']",
-      "input[data-test*='hourly-rate']",
-      "input[data-test*='HourlyRate']",
-      "input[data-ev-hourly-rate]",
-      "input[data-test*='hourly']",
-      "input[name*='hourly']",
-      "input[name*='chargedAmount']",
-      "input[aria-label*='Hourly rate']",
-      "input[aria-label*='hourly rate']",
-      "input[aria-label*='Hourly']",
-      "input[aria-label*='rate']",
-      "input[placeholder*='/hr']",
-    ]);
-  }
-
-  function applyBidToPage() {
-    if (!lastBidAdvice) {
-      setStatus("Generate bid recommendation first.", true);
-      return;
-    }
-
-    const paymentType = lastBidAdvice.paymentType || "hourly";
-    const rawValue =
-      paymentType === "fixed"
-        ? lastBidAdvice.recommendedFixedBid
-        : lastBidAdvice.recommendedHourlyRate;
-    const numericValue = Number(rawValue);
-    if (!Number.isFinite(numericValue) || numericValue <= 0) {
-      setStatus("No usable bid number available to apply.", true);
-      return;
-    }
-
-    const bidInput = _findBidInput(paymentType);
-    if (!bidInput) {
-      setStatus("Could not find bid input field on this page.", true);
-      return;
-    }
-
-    // Insert number only (no $ or /hr text) so Upwork input parsing stays clean.
-    _setInputValue(bidInput, numericValue.toFixed(2));
-    setStatus(
-      paymentType === "fixed"
-        ? `Applied fixed bid: $${numericValue.toFixed(2)}`
-        : `Applied hourly rate: $${numericValue.toFixed(2)}/hr`,
-    );
   }
 
   async function submitFeedback(rating) {
@@ -1098,11 +1027,14 @@ function setupInPageAssistant() {
     }
   }
 
-  async function runAnalysis() {
+  async function runAnalysis({ reuseAnalysis = false } = {}) {
     try {
       setLoading(true);
       setStatus("Extracting job details...");
-      setEmptyState();
+      if (!reuseAnalysis) {
+        setEmptyState();
+        lastAnalysisCache = null;
+      }
 
       const token = await getToken();
       if (!token) {
@@ -1112,10 +1044,14 @@ function setupInPageAssistant() {
       }
 
       const tone = toneEl.value || FPO_DEFAULT_TONE;
+      const proposalLength = lengthEl?.value || "medium";
       const prefs = await storageGet(["preferredTone", "backendBaseUrl"]);
       const backendBaseUrl =
         (prefs.backendBaseUrl || "").trim() || FPO_DEFAULT_BACKEND;
-      await storageSet({ preferredTone: tone });
+      await storageSet({
+        preferredTone: tone,
+        preferredProposalLength: proposalLength,
+      });
 
       const job = extractUpworkJobData();
       lastJobId = job.url || window.location.href;
@@ -1135,16 +1071,30 @@ function setupInPageAssistant() {
         );
       }
 
-      const jobPayload = buildPluginJobBody(job, tone);
+      const jobPayload = buildPluginJobBody(job, tone, proposalLength);
+      lastJobPayload = jobPayload;
 
-      setStatus("Analyzing with backend...");
+      const canReuse =
+        reuseAnalysis &&
+        lastAnalysisCache &&
+        lastJobId &&
+        lastJobId === (job.url || window.location.href);
+      const analyzeBody = { ...jobPayload };
+      if (canReuse) {
+        analyzeBody.reuse_analysis = true;
+        analyzeBody.analysis_cache = lastAnalysisCache;
+        setStatus("Regenerating proposal (same job analysis)...");
+      } else {
+        setStatus("Analyzing with backend...");
+      }
+
       const response = await fetch(`${backendBaseUrl}/plugin/analyze-job`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(jobPayload),
+        body: JSON.stringify(analyzeBody),
       });
 
       if (!response.ok) {
@@ -1173,6 +1123,7 @@ function setupInPageAssistant() {
           },
           body: JSON.stringify({
             ...jobPayload,
+            fit_score: data.fit_score,
             client_budget_text: job.budgetText || "",
             payment_type_hint: job.paymentTypeHint || "",
             risk_level: riskLevelEl.value || "balanced",
@@ -1186,7 +1137,6 @@ function setupInPageAssistant() {
         const bidErr = await bidResponse.json().catch(() => ({}));
         bidHeadlineEl.textContent =
           "Bid recommendation unavailable for this job.";
-        lastBidAdvice = null;
         setStatus(bidErr.detail || "Could not generate bid advice.", true);
       }
       setStatus("Done. You can copy or insert the proposal.");
@@ -1211,18 +1161,74 @@ function setupInPageAssistant() {
   closeBtn.addEventListener("click", () => {
     panel.classList.remove("is-open");
   });
-  generateBtn.addEventListener("click", runAnalysis);
-  regenerateBtn.addEventListener("click", runAnalysis);
-  applyBidBtn.addEventListener("click", applyBidToPage);
-  copyNegotiationBtn.addEventListener("click", async () => {
-    const text = (lastBidAdvice?.negotiationScript || "").trim();
-    if (!text) {
-      setStatus("No negotiation line available yet.", true);
-      return;
+  async function shortenProposal() {
+    try {
+      const draft = proposalEl.value.trim();
+      if (!draft) {
+        setStatus("Generate or paste a proposal first.", true);
+        return;
+      }
+      if (!lastJobPayload) {
+        setStatus("Run Generate on this job first.", true);
+        return;
+      }
+
+      setLoading(true);
+      setStatus("Shortening proposal...");
+
+      const token = await getToken();
+      if (!token) {
+        throw new Error(
+          "No auth token found. Open extension popup on your app tab and click Read Token first.",
+        );
+      }
+
+      const prefs = await storageGet(["backendBaseUrl"]);
+      const backendBaseUrl =
+        (prefs.backendBaseUrl || "").trim() || FPO_DEFAULT_BACKEND;
+
+      const response = await fetch(`${backendBaseUrl}/plugin/shorten-proposal`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          job_title: lastJobPayload.job_title,
+          job_description: lastJobPayload.job_description,
+          job_url: lastJobPayload.job_url,
+          tone: toneEl.value || FPO_DEFAULT_TONE,
+          proposal_text: draft,
+          analysis_cache: lastAnalysisCache || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(
+          err.detail || `Shorten failed with status ${response.status}`,
+        );
+      }
+
+      const data = await response.json();
+      proposalEl.value = data.proposal || draft;
+      if (data.fit_score != null) {
+        fitScoreEl.textContent = `${data.fit_score}%`;
+        fitBreakdownEl.textContent = formatFitBreakdown(data.breakdown);
+      }
+      setStatus("Proposal shortened.");
+    } catch (error) {
+      setStatus(error.message || "Failed to shorten proposal.", true);
+    } finally {
+      setLoading(false);
     }
-    await navigator.clipboard.writeText(text);
-    setStatus("Negotiation line copied.");
-  });
+  }
+
+  generateBtn.addEventListener("click", () => runAnalysis({ reuseAnalysis: false }));
+  regenerateBtn.addEventListener("click", () =>
+    runAnalysis({ reuseAnalysis: true }),
+  );
+  shortenBtn.addEventListener("click", shortenProposal);
   copyBtn.addEventListener("click", async () => {
     if (!proposalEl.value.trim()) {
       setStatus("No proposal to copy.", true);

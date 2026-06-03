@@ -102,28 +102,6 @@ export default function Analytics() {
           <h3 className={styles.chartTitle}>Proposal Status Distribution</h3>
           <KeywordCoverageChart data={getStatusCoverageData()} />
         </div>
-
-        <div className={styles.chartCard}>
-          <h3 className={styles.chartTitle}>Top Performing Proposal</h3>
-          {analytics?.top_performing_proposal ? (
-            <div className={styles.topProposal}>
-              <p className={styles.topProposalMeta}>
-                Status: <strong>{analytics.top_performing_proposal.status}</strong>
-                {" • "}
-                Fit Score:{" "}
-                <strong>{analytics.top_performing_proposal.fit_score ?? "N/A"}</strong>
-              </p>
-              <p className={styles.topProposalMeta}>
-                Created: {formatWhen(analytics.top_performing_proposal.created_at)}
-              </p>
-              <p className={styles.topProposalExcerpt}>
-                {analytics.top_performing_proposal.excerpt || "No proposal excerpt available."}
-              </p>
-            </div>
-          ) : (
-            <p className={styles.emptyText}>No top-performing proposal available yet.</p>
-          )}
-        </div>
       </div>
 
       <div className={styles.suggestionsCard}>

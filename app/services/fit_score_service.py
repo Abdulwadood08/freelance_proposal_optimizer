@@ -1,4 +1,9 @@
-"""Weighted fit score calculation utilities."""
+"""Weighted fit score calculation utilities.
+
+``fit_score`` is a deterministic, rule-based blend of subscores (skill overlap,
+simple profile vs. job text checks, requirement coverage, draft length/structure).
+It is not a forecast of whether a client will hire you.
+"""
 
 from typing import Any, Dict, List
 

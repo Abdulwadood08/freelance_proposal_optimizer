@@ -68,10 +68,12 @@ def build_proposal_generation_prompt(
     learning_insights = _build_learning_insights(winning_patterns)
 
     tone_descriptions = {
-        "professional": "professional, formal, and business-like",
+        "professional": (
+            "professional, calm, and business-like — no hype, pressure, or aggressive sales language"
+        ),
         "friendly": "friendly, warm, approachable, and personable",
-        "confident": "confident, assertive, and self-assured",
-        "balanced": "balanced mix of professional and friendly",
+        "confident": "confident and assured while remaining respectful and professional (not pushy)",
+        "balanced": "balanced mix of professional and friendly, never aggressive or salesy",
     }
     tone_description = tone_descriptions.get(preferred_tone, "professional")
 
@@ -110,6 +112,7 @@ Job Post:
 
 IMPORTANT INSTRUCTIONS:
 - Preferred Tone: {tone_description}
+- Voice: Write like a capable peer consultant, not a marketer. Avoid ALL CAPS, exclamation spam, and ultimatums.
 - Proposal Length: {length_guideline}
 - The main proposal should match the preferred tone ({preferred_tone})
 - Grounding: Base every paragraph on the Job Title and Job Description. Do NOT pivot to unrelated domains (e.g. accounting or unrelated ads stacks) unless the job explicitly asks for them.

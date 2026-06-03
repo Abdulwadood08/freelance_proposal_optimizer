@@ -269,8 +269,6 @@ export default function ProfileForm() {
   const [workExperience, setWorkExperience] = useState<WorkExp[]>([]);
   const [portfolioLinks, setPortfolioLinks] = useState(["", ""]); // Upwork + LinkedIn
   const [skillInput, setSkillInput] = useState("");
-  const [caseStudyInput, setCaseStudyInput] = useState("");
-  const [fiverrGigInput, setFiverrGigInput] = useState("");
   const [showCaseStudyForm, setShowCaseStudyForm] = useState(false);
   const [newCaseStudy, setNewCaseStudy] = useState<CaseStudy>({
     title: "",
@@ -295,7 +293,7 @@ export default function ProfileForm() {
         resume_url: user.resume_url,
         resume_file: null,
         case_studies: user.case_studies || [],
-        fiverr_gigs: user.fiverr_gigs,
+        fiverr_gigs: user.fiverr_gigs || [],
         upwork_profile: user.upwork_profile,
       });
       setPortfolioLinks([
@@ -420,23 +418,6 @@ export default function ProfileForm() {
       ...formData,
       skills: formData.skills.filter((x) => x !== s),
     });
-  };
-
-  const addCaseStudy = () => {
-    if (
-      caseStudyInput.trim() &&
-      !formData.case_studies.some((cs) =>
-        typeof cs === "string"
-          ? cs === caseStudyInput.trim()
-          : cs.title === caseStudyInput.trim(),
-      )
-    ) {
-      setFormData({
-        ...formData,
-        case_studies: [...formData.case_studies, caseStudyInput.trim()],
-      });
-      setCaseStudyInput("");
-    }
   };
 
   const removeCaseStudy = (index: number) => {
@@ -613,26 +594,6 @@ export default function ProfileForm() {
     setMessage({ type: "success", text: "Case study added" });
   };
 
-  const addFiverrGig = () => {
-    if (
-      fiverrGigInput.trim() &&
-      !formData.fiverr_gigs.includes(fiverrGigInput.trim())
-    ) {
-      setFormData({
-        ...formData,
-        fiverr_gigs: [...formData.fiverr_gigs, fiverrGigInput.trim()],
-      });
-      setFiverrGigInput("");
-    }
-  };
-
-  const removeFiverrGig = (g: string) => {
-    setFormData({
-      ...formData,
-      fiverr_gigs: formData.fiverr_gigs.filter((x) => x !== g),
-    });
-  };
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!currentUser) return;
@@ -658,9 +619,12 @@ export default function ProfileForm() {
       ];
       await createUser(
         {
-          ...formData,
+          user_id: formData.user_id,
+          name: formData.name,
+          email: formData.email,
+          skills: formData.skills,
           resume_url: resumeUrl,
-          resume_file: undefined,
+          case_studies: formData.case_studies,
           upwork_profile: upwork,
           fiverr_gigs: fiverrGigs,
         },

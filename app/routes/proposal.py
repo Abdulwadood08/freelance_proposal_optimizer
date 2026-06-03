@@ -133,6 +133,66 @@ def _generate_proposal_dual_backend(**kwargs):
         return get_huggingface_client().generate_proposal(**kwargs)
 
 
+PLUGIN_ANALYSIS_TEMPERATURE = 0.2
+PLUGIN_PROPOSAL_TEMPERATURE = 0.35
+
+
+def _normalize_proposal_length(value: Optional[str]) -> str:
+    normalized = (value or "medium").strip().lower()
+    if normalized in {"short", "medium", "long"}:
+        return normalized
+    return "medium"
+
+
+def _analysis_result_from_cache(cache: PluginAnalysisCache) -> dict:
+    return {
+        "relevant_skills": list(cache.relevant_skills or []),
+        "missing_skills": list(cache.missing_skills or []),
+        "key_requirements": list(cache.key_requirements or []),
+        "job_summary": cache.job_summary,
+        "suggestions": list(cache.suggestions or []),
+        "profile_gaps": list(cache.profile_gaps or []),
+    }
+
+
+def _plugin_analysis_cache_from_result(analysis_result: dict) -> PluginAnalysisCache:
+    return PluginAnalysisCache(
+        relevant_skills=analysis_result.get("relevant_skills", []) or [],
+        missing_skills=analysis_result.get("missing_skills", []) or [],
+        key_requirements=analysis_result.get("key_requirements", []) or [],
+        job_summary=analysis_result.get("job_summary"),
+        suggestions=analysis_result.get("suggestions", []) or [],
+        profile_gaps=analysis_result.get("profile_gaps", []) or [],
+    )
+
+
+def _build_plugin_strategy(
+    analysis_result: dict,
+    *,
+    relevant_skills: List[str],
+    suggestions: List[str],
+    profile_gaps: List[str],
+) -> str:
+    strategy_parts = []
+    if analysis_result.get("job_summary"):
+        strategy_parts.append(f"Job Summary: {analysis_result['job_summary']}")
+    if relevant_skills:
+        strategy_parts.append(
+            "Lead with these matching skills: " + ", ".join(relevant_skills[:5])
+        )
+    if suggestions:
+        strategy_parts.append("Execution strategy: " + " ".join(suggestions[:2]))
+    if profile_gaps:
+        strategy_parts.append(
+            "Profile gaps to address briefly in proposal: " + ", ".join(profile_gaps[:3])
+        )
+    return (
+        "\n\n".join(strategy_parts)
+        if strategy_parts
+        else "Highlight relevance and provide a strong call-to-action."
+    )
+
+
 def _build_job_grounding_from_analysis(analysis_result: dict) -> Optional[str]:
     parts: List[str] = []
     summary = (analysis_result.get("job_summary") or "").strip()
@@ -239,12 +299,25 @@ class PluginGenerateProposalResponse(BaseModel):
     proposal: str
 
 
+class PluginAnalysisCache(BaseModel):
+    """Cached job analysis for stable fit scoring on proposal regenerate."""
+    relevant_skills: List[str] = Field(default_factory=list)
+    missing_skills: List[str] = Field(default_factory=list)
+    key_requirements: List[str] = Field(default_factory=list)
+    job_summary: Optional[str] = None
+    suggestions: List[str] = Field(default_factory=list)
+    profile_gaps: List[str] = Field(default_factory=list)
+
+
 class PluginAnalyzeJobRequest(BaseModel):
     """Schema for full extension assistant analysis."""
     job_title: str
     job_description: str
     job_url: Optional[str] = None
     tone: Optional[str] = "professional"
+    proposal_length: Optional[str] = "medium"
+    reuse_analysis: bool = False
+    analysis_cache: Optional[PluginAnalysisCache] = None
     client_name: Optional[str] = None
     job_skills: List[str] = Field(default_factory=list)
     budget_display: Optional[str] = None
@@ -269,6 +342,24 @@ class PluginAnalyzeJobResponse(BaseModel):
     strategy: str
     proposal: str
     variations: List[PluginVariation]
+    analysis_cache: Optional[PluginAnalysisCache] = None
+
+
+class PluginShortenProposalRequest(BaseModel):
+    """Schema for shortening an existing plugin proposal draft."""
+    job_title: str
+    job_description: str
+    proposal_text: str
+    tone: Optional[str] = "professional"
+    job_url: Optional[str] = None
+    analysis_cache: Optional[PluginAnalysisCache] = None
+
+
+class PluginShortenProposalResponse(BaseModel):
+    """Shortened proposal plus optional refreshed fit score."""
+    proposal: str
+    fit_score: Optional[int] = None
+    breakdown: Optional[dict] = None
 
 
 class PluginRecommendBidRequest(BaseModel):
@@ -277,6 +368,7 @@ class PluginRecommendBidRequest(BaseModel):
     job_description: str
     job_url: Optional[str] = None
     tone: Optional[str] = "professional"
+    fit_score: Optional[int] = None
     client_budget_text: Optional[str] = None
     payment_type_hint: Optional[str] = None
     risk_level: Optional[str] = "balanced"  # conservative, balanced, aggressive
@@ -842,25 +934,32 @@ async def analyze_job_from_plugin(
             project_type_label=request.project_type_label,
         )
 
+        proposal_length = _normalize_proposal_length(request.proposal_length)
         analysis_client = get_analysis_client()
 
-        analysis_result = analysis_client.analyze_job_post(
-            job_post=job_post,
-            user_skills=user_skills,
-            user_case_studies=case_studies,
-        )
+        if request.reuse_analysis and request.analysis_cache:
+            analysis_result = _analysis_result_from_cache(request.analysis_cache)
+        else:
+            analysis_result = analysis_client.analyze_job_post(
+                job_post=job_post,
+                user_skills=user_skills,
+                user_case_studies=case_studies,
+                temperature=PLUGIN_ANALYSIS_TEMPERATURE,
+            )
 
         job_grounding_context = _build_job_grounding_from_analysis(analysis_result)
+        analysis_cache = _plugin_analysis_cache_from_result(analysis_result)
 
         proposal_result = _generate_proposal_dual_backend(
             user_skills=user_skills,
             case_studies=case_studies,
             job_post=job_post,
             preferred_tone=request.tone or "professional",
-            proposal_length="medium",
+            proposal_length=proposal_length,
             winning_patterns=winning_patterns if winning_patterns else None,
             freelancer_display_name=_freelancer_display_name(user_data),
             job_grounding_context=job_grounding_context,
+            temperature=PLUGIN_PROPOSAL_TEMPERATURE,
         )
 
         relevant_skills = analysis_result.get("relevant_skills", []) or []
@@ -875,20 +974,12 @@ async def analyze_job_from_plugin(
             :30
         ]
 
-        strategy_parts = []
-        if analysis_result.get("job_summary"):
-            strategy_parts.append(f"Job Summary: {analysis_result['job_summary']}")
-        if relevant_skills:
-            strategy_parts.append(
-                "Lead with these matching skills: " + ", ".join(relevant_skills[:5])
-            )
-        if suggestions:
-            strategy_parts.append("Execution strategy: " + " ".join(suggestions[:2]))
-        if profile_gaps:
-            strategy_parts.append(
-                "Profile gaps to address briefly in proposal: " + ", ".join(profile_gaps[:3])
-            )
-        strategy = "\n\n".join(strategy_parts) if strategy_parts else "Highlight relevance and provide a strong call-to-action."
+        strategy = _build_plugin_strategy(
+            analysis_result,
+            relevant_skills=relevant_skills,
+            suggestions=suggestions,
+            profile_gaps=profile_gaps,
+        )
 
         tone_variations = proposal_result.get("tone_variations", {}) or {}
         variations = []
@@ -922,7 +1013,7 @@ async def analyze_job_from_plugin(
             "tone_variations": tone_variations,
             "job_post": job_post,
             "preferred_tone": request.tone or "professional",
-            "proposal_length": "medium",
+            "proposal_length": proposal_length,
             "source": "plugin_analyze",
             "status": "draft",
             "fit_score": fit_score,
@@ -940,6 +1031,7 @@ async def analyze_job_from_plugin(
             "strategy": strategy,
             "proposal": proposal_text,
             "variations": variations,
+            "analysis_cache": analysis_cache,
         }
     except HTTPException:
         raise
@@ -952,6 +1044,89 @@ async def analyze_job_from_plugin(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to analyze plugin job: {str(e)}",
+        )
+
+
+@router.post("/plugin/shorten-proposal", response_model=PluginShortenProposalResponse)
+async def shorten_proposal_from_plugin(
+    request: PluginShortenProposalRequest,
+    authorization: Optional[str] = Header(default=None, alias="Authorization"),
+):
+    """Shorten an existing proposal draft without re-running full job analysis."""
+    try:
+        user_id = _get_user_id_from_bearer_token(authorization)
+        firestore_client = _get_firestore()
+
+        user_data = firestore_client.get_user(user_id)
+        if not user_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User profile not found. Please complete your profile first.",
+            )
+
+        proposal_text = (request.proposal_text or "").strip()
+        if not proposal_text:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="proposal_text is required.",
+            )
+
+        user_skills = user_data.get("skills", [])
+        job_post = _compose_plugin_job_post(
+            job_title=request.job_title,
+            job_description=request.job_description,
+            job_url=request.job_url,
+            client_name=None,
+            job_skills=[],
+            budget_display=None,
+        )
+
+        openai_client = get_openai_client()
+        shortened = openai_client.improve_proposal_once(
+            proposal=proposal_text,
+            job_post=job_post,
+            user_skills=user_skills,
+            weaknesses=["Proposal is longer than ideal for Upwork cover letters."],
+            suggestions=[
+                "Shorten by roughly 25-35% while keeping the strongest job-specific points.",
+                "Keep one clear call-to-action.",
+            ],
+            preferred_tone=request.tone or "professional",
+            target_length="short",
+            freelancer_display_name=_freelancer_display_name(user_data),
+        )
+
+        fit_score = None
+        fit_breakdown = None
+        if request.analysis_cache:
+            analysis_result = _analysis_result_from_cache(request.analysis_cache)
+            fit_result = calculate_fit_score(
+                relevant_skills=analysis_result.get("relevant_skills", []) or [],
+                missing_skills=analysis_result.get("missing_skills", []) or [],
+                key_requirements=analysis_result.get("key_requirements", []) or [],
+                user_data=user_data,
+                job_post=job_post,
+                proposal_text=shortened,
+            )
+            fit_score = fit_result["fit_score"]
+            fit_breakdown = fit_result["breakdown"]
+
+        return {
+            "proposal": shortened,
+            "fit_score": fit_score,
+            "breakdown": fit_breakdown,
+        }
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to shorten plugin proposal: {str(e)}",
         )
 
 
@@ -990,21 +1165,29 @@ async def recommend_bid_from_plugin(
             project_type_label=request.project_type_label,
         )
 
-        analysis_client = get_analysis_client()
-        analysis_result = analysis_client.analyze_job_post(
-            job_post=job_post,
-            user_skills=user_skills,
-            user_case_studies=case_studies,
-        )
-        fit_result = calculate_fit_score(
-            relevant_skills=analysis_result.get("relevant_skills", []) or [],
-            missing_skills=analysis_result.get("missing_skills", []) or [],
-            key_requirements=analysis_result.get("key_requirements", []) or [],
-            user_data=user_data,
-            job_post=job_post,
-            proposal_text="",
-        )
-        fit_score = fit_result["fit_score"]
+        if request.fit_score is not None:
+            try:
+                fit_score = int(request.fit_score)
+            except (TypeError, ValueError):
+                fit_score = 65
+            fit_score = max(0, min(100, fit_score))
+        else:
+            analysis_client = get_analysis_client()
+            analysis_result = analysis_client.analyze_job_post(
+                job_post=job_post,
+                user_skills=user_skills,
+                user_case_studies=case_studies,
+                temperature=PLUGIN_ANALYSIS_TEMPERATURE,
+            )
+            fit_result = calculate_fit_score(
+                relevant_skills=analysis_result.get("relevant_skills", []) or [],
+                missing_skills=analysis_result.get("missing_skills", []) or [],
+                key_requirements=analysis_result.get("key_requirements", []) or [],
+                user_data=user_data,
+                job_post=job_post,
+                proposal_text="",
+            )
+            fit_score = fit_result["fit_score"]
 
         bid = get_openai_client().recommend_bid(
             job_post=job_post,

@@ -56,7 +56,7 @@ export interface CreateUserRequest {
   email: string;
   skills: string[];
   resume_url: string;
-  case_studies: string[];
+  case_studies: unknown[];
   fiverr_gigs: string[];
   upwork_profile: string;
 }

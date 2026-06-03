@@ -92,7 +92,7 @@ Case Studies (mention only if relevant to this job):
 
 Freelancer Skills (use ONLY items relevant to this job; ignore unrelated resume skills): {', '.join(user_skills[:20]) if user_skills else 'Not specified'}
 
-Tone: {tone}
+Tone: {tone} (professional = calm and business-like; never aggressive or salesy)
 Length: {length_hint}
 
 Requirements:
@@ -116,6 +116,7 @@ Proposal:"""
         winning_patterns=None,
         freelancer_display_name=None,
         job_grounding_context=None,
+        **_kwargs,
     ):
         try:
             selected_tone = preferred_tone if preferred_tone in {"professional", "friendly", "confident"} else "professional"

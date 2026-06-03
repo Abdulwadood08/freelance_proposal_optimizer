@@ -26,7 +26,6 @@ export default function Settings() {
   const { currentUser } = useAuth();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [emailNotifications, setEmailNotifications] = useState(true);
   const [proposalAlerts, setProposalAlerts] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<ToastMessage>(null);
@@ -46,7 +45,6 @@ export default function Settings() {
       const { getUser } = await import("@/lib/api");
       const user = await getUser(currentUser.uid, currentUser);
       setFullName(user.name || "");
-      if (typeof user.email_notifications === "boolean") setEmailNotifications(user.email_notifications);
       if (typeof user.proposal_alerts === "boolean") setProposalAlerts(user.proposal_alerts);
     } catch (err) {
       // User profile might not exist yet
@@ -65,17 +63,6 @@ export default function Settings() {
       setMessage({ type: "error", text: (err as Error).message || "Failed to save profile settings" });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleToggleEmailNotifications = async (checked: boolean) => {
-    setEmailNotifications(checked);
-    if (!currentUser) return;
-    try {
-      const { updateUser } = await import("@/lib/api");
-      await updateUser(currentUser.uid, { email_notifications: checked }, currentUser);
-    } catch (err) {
-      console.error("Failed to save preference", err);
     }
   };
 
@@ -148,23 +135,6 @@ export default function Settings() {
         </div>
         <div className={styles.cardContent}>
           <div className={styles.toggleGroup}>
-            <div className={styles.toggleItem}>
-              <div className={styles.toggleContent}>
-                <div className={styles.toggleText}>
-                  <span className={styles.toggleLabel}>Email Notifications</span>
-                  <span className={styles.toggleDescription}>Receive updates via email</span>
-                </div>
-                <label className={styles.toggleSwitch}>
-                  <input
-                    type="checkbox"
-                    checked={emailNotifications}
-                    onChange={(e) => handleToggleEmailNotifications(e.target.checked)}
-                  />
-                  <span className={styles.slider} />
-                </label>
-              </div>
-            </div>
-
             <div className={styles.toggleItem}>
               <div className={styles.toggleContent}>
                 <div className={styles.toggleText}>

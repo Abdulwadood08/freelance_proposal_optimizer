@@ -33,6 +33,7 @@ class OpenAIClient:
         winning_patterns: Optional[Dict[str, Any]] = None,
         freelancer_display_name: Optional[str] = None,
         job_grounding_context: Optional[str] = None,
+        temperature: Optional[float] = None,
     ) -> Dict[str, Any]:
         """
         Generate a tailored Upwork proposal using GPT-4.1-mini.
@@ -78,7 +79,7 @@ class OpenAIClient:
                     }
                 ],
                 response_format={"type": "json_object"},
-                temperature=0.55
+                temperature=temperature if temperature is not None else 0.55,
             )
             
             # Parse the JSON response
@@ -110,7 +111,8 @@ class OpenAIClient:
         self,
         job_post: str,
         user_skills: list,
-        user_case_studies: list
+        user_case_studies: list,
+        temperature: Optional[float] = None,
     ) -> Dict[str, Any]:
         """
         Analyze a job post and provide smart suggestions.
@@ -190,7 +192,7 @@ Return ONLY valid JSON, no additional text or markdown formatting."""
                     }
                 ],
                 response_format={"type": "json_object"},
-                temperature=0.5  # Lower temperature for more consistent analysis
+                temperature=temperature if temperature is not None else 0.5,
             )
             
             import json
@@ -333,7 +335,9 @@ Rules:
 - If payment type appears hourly, set recommended_fixed_bid to null.
 - Keep values realistic for a mid-level freelancer.
 - Confidence must be 0-100.
-- Keep response concise and practical."""
+- Keep response concise and practical.
+- Use a professional, consultative tone in positioning and negotiation_script (no hype or pressure tactics).
+- Risk level "aggressive" means competitive (upper range) pricing only — wording stays polite and professional."""
 
         try:
             response = self.client.chat.completions.create(

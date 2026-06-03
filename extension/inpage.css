@@ -176,6 +176,10 @@
   gap: 8px;
 }
 
+.fpo-row--full {
+  grid-template-columns: 1fr;
+}
+
 .fpo-label {
   display: block;
   font-size: 12px;
@@ -237,8 +241,25 @@
   margin: 0;
 }
 
-.fpo-breakdown-list {
-  margin-top: 8px;
+.fpo-fit-breakdown {
+  margin: 4px 0 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--fpo-muted);
+}
+
+.fpo-fit-note {
+  margin: 8px 0 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--fpo-muted);
+}
+
+.fpo-hint {
+  margin: 6px 0 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--fpo-muted);
 }
 
 .fpo-feedback-row {
