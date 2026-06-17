@@ -1,8 +1,9 @@
-# Repo-root Netlify config (Next.js app in frontend/)
+# Netlify build for monorepo — Next.js static export in frontend/
 [build]
   base = "frontend"
   command = "npm run build"
-  publish = "out"
+  # Publish path is relative to the repository root (not the base directory).
+  publish = "frontend/out"
 
 [build.environment]
   NODE_VERSION = "20"
