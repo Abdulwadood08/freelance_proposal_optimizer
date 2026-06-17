@@ -380,8 +380,8 @@ export default function Dashboard() {
                       borderRadius: "8px",
                     }}
                     labelStyle={{ color: "var(--dashboard-title)" }}
-                    formatter={(value: number, name: string) => [
-                      value,
+                    formatter={(value, name) => [
+                      value ?? 0,
                       name === "generated" ? "Created" : "Won",
                     ]}
                   />
@@ -461,7 +461,7 @@ export default function Dashboard() {
                       borderRadius: "8px",
                     }}
                     labelStyle={{ color: "var(--dashboard-title)" }}
-                    formatter={(value: number) => [`${value}`, "Proposals"]}
+                    formatter={(value) => [`${value ?? 0}`, "Proposals"]}
                   />
                   <Bar
                     dataKey="count"

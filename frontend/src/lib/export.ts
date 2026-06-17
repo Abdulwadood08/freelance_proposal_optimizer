@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
+import { Document, Packer, Paragraph, HeadingLevel } from 'docx';
 
 export interface ExportContent {
   proposal: string;
@@ -22,11 +22,7 @@ export async function exportToPDF(content: ExportContent): Promise<void> {
   // Helper to add text with word wrap
   const addText = (text: string, fontSize: number, isBold: boolean = false) => {
     doc.setFontSize(fontSize);
-    if (isBold) {
-      doc.setFont(undefined, 'bold');
-    } else {
-      doc.setFont(undefined, 'normal');
-    }
+    doc.setFont('helvetica', isBold ? 'bold' : 'normal');
 
     const lines = doc.splitTextToSize(text, maxWidth);
     
@@ -76,7 +72,7 @@ export async function exportToPDF(content: ExportContent): Promise<void> {
  * Export proposal as DOCX
  */
 export async function exportToDOCX(content: ExportContent): Promise<void> {
-  const children: (Paragraph | TextRun)[] = [];
+  const children: Paragraph[] = [];
 
   // Title
   if (content.title) {

@@ -21,7 +21,7 @@ import AppToast, {
 } from "@/components/shared/AppToast/AppToast";
 
 interface ProposalDisplayProps {
-  proposal: ProposalResponse;
+  proposal: ProposalResponse | null;
   onProposalUpdated?: (updatedProposal: ProposalResponse) => void;
 }
 
@@ -121,7 +121,8 @@ export default function ProposalDisplay({
   };
 
   const handleSave = async () => {
-    if (!currentUser || !proposalState.id) {
+    const proposalId = proposalState?.id;
+    if (!currentUser || !proposalId) {
       setMessage({
         type: "error",
         text: "Cannot save: Missing user or proposal ID",
@@ -129,30 +130,34 @@ export default function ProposalDisplay({
       return;
     }
 
+    const current = proposalState!;
     setSaving(true);
     setMessage(null);
 
     try {
-      const updates: any = {};
-      updates.tone_variations = {
-        ...proposalState.tone_variations,
-        [activeTone]: editedContent,
+      const toneKey = activeTone as keyof typeof current.tone_variations;
+      const toneVariations = {
+        ...current.tone_variations,
+        ...(activeTone === "professional" ||
+        activeTone === "friendly" ||
+        activeTone === "confident"
+          ? { [toneKey]: editedContent }
+          : {}),
       };
 
+      const updates = { tone_variations: toneVariations };
+
       await updateProposal(
-        proposalState.id,
+        proposalId,
         currentUser.uid,
         updates,
         currentUser,
       );
 
-      // Update local state
-      const updatedProposal = { ...proposalState };
-      if (updates.proposal) updatedProposal.proposal = updates.proposal;
-      if (updates.cover_letter)
-        updatedProposal.cover_letter = updates.cover_letter;
-      if (updates.tone_variations)
-        updatedProposal.tone_variations = updates.tone_variations;
+      const updatedProposal: ProposalResponse = {
+        ...current,
+        tone_variations: toneVariations,
+      };
 
       setProposalState(updatedProposal);
       setIsEditing(false);
@@ -172,7 +177,7 @@ export default function ProposalDisplay({
   };
 
   const handleSaveAsTemplate = async () => {
-    if (!currentUser || !templateName.trim()) {
+    if (!currentUser || !proposalState || !templateName.trim()) {
       setMessage({ type: "error", text: "Please enter a template name" });
       return;
     }
@@ -208,7 +213,7 @@ export default function ProposalDisplay({
   };
 
   const handleScoreProposal = async () => {
-    if (!currentUser || !proposalState.job_post) {
+    if (!currentUser || !proposalState?.job_post) {
       setMessage({
         type: "error",
         text: "Cannot score: Missing user or job post",
@@ -216,6 +221,7 @@ export default function ProposalDisplay({
       return;
     }
 
+    const jobPost = proposalState.job_post;
     setScoring(true);
     setMessage(null);
 
@@ -223,7 +229,7 @@ export default function ProposalDisplay({
       const result = await scoreProposal(
         currentUser.uid,
         getActiveContent(),
-        proposalState.job_post,
+        jobPost,
         currentUser,
       );
       setScoreResult(result);
@@ -332,6 +338,8 @@ export default function ProposalDisplay({
   };
 
   const handleExport = async (format: "pdf" | "docx" | "txt") => {
+    if (!proposalState) return;
+
     try {
       const exportContent = {
         proposal: proposalState.proposal,

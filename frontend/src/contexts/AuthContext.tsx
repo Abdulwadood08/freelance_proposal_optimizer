@@ -55,13 +55,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
-  function signup(email: string, password: string) {
-    return createUserWithEmailAndPassword(auth, email, password).then(() => {
-      // User creation is handled automatically
-    });
+  async function signup(email: string, password: string): Promise<void> {
+    await createUserWithEmailAndPassword(auth, email, password);
   }
 
-  function login(email: string, password: string, rememberMe: boolean = false) {
+  async function login(
+    email: string,
+    password: string,
+    rememberMe: boolean = false,
+  ): Promise<void> {
     if (rememberMe && typeof window !== 'undefined') {
       localStorage.setItem(REMEMBER_ME_KEY, 'true');
       localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
@@ -70,10 +72,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.removeItem(REMEMBERED_EMAIL_KEY);
     }
     setIsRemembered(rememberMe);
-    return signInWithEmailAndPassword(auth, email, password);
+    await signInWithEmailAndPassword(auth, email, password);
   }
 
-  function loginWithGoogle(rememberMe: boolean = false) {
+  async function loginWithGoogle(rememberMe: boolean = false): Promise<void> {
     const provider = new GoogleAuthProvider();
     if (rememberMe && typeof window !== 'undefined') {
       localStorage.setItem(REMEMBER_ME_KEY, 'true');
@@ -81,7 +83,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.removeItem(REMEMBER_ME_KEY);
     }
     setIsRemembered(rememberMe);
-    return signInWithPopup(auth, provider);
+    await signInWithPopup(auth, provider);
   }
 
   function logout() {

@@ -29,7 +29,7 @@ app.add_middleware(
         "https://www.upwork.com",
         "https://upwork.com",
     ],
-    allow_origin_regex=r"chrome-extension://.*",
+    allow_origin_regex=r"(chrome-extension://.*|https://[a-z0-9-]+\.netlify\.app)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
