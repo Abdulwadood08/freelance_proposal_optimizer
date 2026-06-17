@@ -1,4 +1,6 @@
+# Repo-root Netlify config (Next.js app in frontend/)
 [build]
+  base = "frontend"
   command = "npm run build"
   publish = "out"
 
