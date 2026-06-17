@@ -1,0 +1,258 @@
+.wizardContainer {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.wizardContent {
+  width: 100%;
+  max-width: 700px;
+}
+
+.progressContainer {
+  margin-bottom: 2rem;
+}
+
+.progressBar {
+  width: 100%;
+  height: 8px;
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.progressFill {
+  height: 100%;
+  background-color: #fff;
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+.progressText {
+  text-align: center;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.wizardCard {
+  background: #fff;
+  border-radius: 12px;
+  padding: 2.5rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.stepHeader {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.stepTitle {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.stepDescription {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.errorMessage {
+  background-color: #fee;
+  color: #c33;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  border: 1px solid #fcc;
+}
+
+.stepContent {
+  margin-bottom: 2rem;
+}
+
+.formGroup {
+  margin-bottom: 1.5rem;
+}
+
+.label {
+  display: block;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  font-size: 0.9375rem;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+  font-family: inherit;
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.helpText {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+.tagInput {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  min-height: 50px;
+  align-items: center;
+}
+
+.tagInputField {
+  flex: 1;
+  min-width: 150px;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  padding: 0.25rem;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--primary-color);
+  color: #fff;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.tagRemove {
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 1.2rem;
+  line-height: 1;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.tagRemove:hover {
+  opacity: 1;
+}
+
+.addButton {
+  margin-top: 0.75rem;
+}
+
+.caseStudiesList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.caseStudyCard {
+  padding: 1rem;
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.caseStudyHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.caseStudyDescription {
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.detailedForm {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.navigationRight {
+  display: flex;
+  gap: 1rem;
+  margin-left: auto;
+}
+
+.skipButton {
+  opacity: 0.7;
+}
+
+@media (max-width: 768px) {
+  .wizardContainer {
+    padding: 1rem;
+  }
+
+  .wizardCard {
+    padding: 1.5rem;
+  }
+
+  .stepTitle {
+    font-size: 1.5rem;
+  }
+
+  .navigation {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .navigationRight {
+    width: 100%;
+    flex-direction: column;
+    margin-left: 0;
+  }
+
+  .navigationRight button {
+    width: 100%;
+  }
+}
+

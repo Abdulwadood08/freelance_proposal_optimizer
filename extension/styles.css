@@ -1,0 +1,163 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --ext-bg: #f8fafc;
+  --ext-surface: #ffffff;
+  --ext-border: #dbe5f2;
+  --ext-text: #0f172a;
+  --ext-muted: #64748b;
+  --ext-input-bg: #ffffff;
+  --ext-input-border: #cbd5e1;
+  --ext-accent-start: #8a2be2;
+  --ext-accent-end: #4169e1;
+  --ext-accent-text: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ext-bg: #111827;
+    --ext-surface: #0f172a;
+    --ext-border: #374151;
+    --ext-text: #f9fafb;
+    --ext-muted: #9ca3af;
+    --ext-input-bg: #1f2937;
+    --ext-input-border: #374151;
+    --ext-accent-start: #8a2be2;
+    --ext-accent-end: #4169e1;
+    --ext-accent-text: #ffffff;
+  }
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: var(--ext-bg);
+  color: var(--ext-text);
+  width: 380px;
+  font-weight: 400;
+}
+
+.container {
+  padding: 14px;
+}
+
+h1 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+h2 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.subtitle {
+  margin: 0 0 12px;
+  color: var(--ext-muted);
+  font-size: 12px;
+}
+
+.label {
+  display: block;
+  margin: 10px 0 6px;
+  font-size: 12px;
+  color: var(--ext-muted);
+}
+
+input,
+select,
+textarea,
+button {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--ext-input-border);
+  background: var(--ext-input-bg);
+  color: var(--ext-text);
+  padding: 9px 10px;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+textarea {
+  margin-top: 8px;
+  resize: vertical;
+  min-height: 140px;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: linear-gradient(
+    135deg,
+    var(--ext-accent-start),
+    var(--ext-accent-end)
+  );
+  color: var(--ext-accent-text);
+  font-weight: 400;
+  margin-top: 8px;
+}
+
+button.secondary {
+  background: var(--ext-input-border);
+  color: var(--ext-text);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.card {
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid var(--ext-border);
+  border-radius: 10px;
+  background: var(--ext-surface);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.preview {
+  margin-top: 8px;
+  background: var(--ext-input-bg);
+  border: 1px solid var(--ext-border);
+  border-radius: 8px;
+  padding: 8px;
+  max-height: 200px;
+  overflow: auto;
+}
+
+.hint,
+.muted,
+.status {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--ext-muted);
+}
+
+.job-title {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ext-text);
+}
+
+.job-meta {
+  margin: 2px 0;
+  font-size: 11px;
+  color: var(--ext-muted);
+  line-height: 1.35;
+}
+
+.job-description {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ext-muted);
+  white-space: pre-wrap;
+}

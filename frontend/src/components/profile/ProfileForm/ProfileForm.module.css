@@ -1,0 +1,782 @@
+/* Profile Builder – match ProposalAI screenshot (dark purple/blue theme) */
+.wrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 1.5rem;
+  align-items: flex-start;
+  max-width: 1400px;
+}
+
+.mainColumn {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebarColumn {
+  width: 320px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1100px) {
+  .wrapper {
+    flex-direction: column;
+  }
+  .sidebarColumn {
+    width: 100%;
+  }
+}
+
+/* ----- Header ----- */
+.header {
+  margin-bottom: 1.5rem;
+}
+
+.title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--dashboard-title);
+  margin-bottom: 0.25rem;
+}
+
+.subtitle {
+  font-size: 0.9375rem;
+  color: var(--dashboard-subtitle);
+}
+
+/* ----- Profile completion ----- */
+.strengthSection {
+  margin-bottom: 2rem;
+}
+
+.strengthTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--dashboard-title);
+  margin-bottom: 0.5rem;
+}
+
+.strengthQuestion {
+  font-size: 0.9375rem;
+  color: var(--dashboard-subtitle);
+  margin-bottom: 0.75rem;
+}
+
+.progressBar {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(138, 43, 226, 0.15);
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #8a2be2, #4169e1);
+  transition: width 0.35s ease;
+}
+
+.progressIndeterminate {
+  height: 100%;
+  width: 40%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #8a2be2, #4169e1);
+  animation: profileProgressPulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes profileProgressPulse {
+  from {
+    transform: translateX(0);
+    opacity: 0.65;
+  }
+  to {
+    transform: translateX(150%);
+    opacity: 1;
+  }
+}
+
+.checklistHint {
+  font-size: 0.8125rem;
+  color: var(--dashboard-subtitle);
+  margin: 0 0 1rem 0;
+}
+
+.progressLabel {
+  display: flex;
+  justify-content: flex-end;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--dashboard-title);
+  margin-bottom: 1rem;
+}
+
+.checklist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  font-size: 0.875rem;
+}
+
+.checkItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--dashboard-subtitle);
+}
+
+.checkItem.done {
+  color: var(--success-color);
+}
+
+.checkItem.done::before {
+  content: "✓";
+  font-weight: bold;
+}
+
+.checkItem.pending {
+  color: #8a2be2;
+}
+
+/* ----- Section blocks ----- */
+.section {
+  margin-bottom: 2rem;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--dashboard-title);
+}
+
+.sectionIcon {
+  width: 18px;
+  height: 18px;
+  color: var(--dashboard-subtitle);
+}
+
+/* Skills input row */
+.skillsRow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 0.75rem;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background: var(--card-bg);
+  margin-bottom: 0.5rem;
+}
+
+.skillsRow input {
+  flex: 1;
+  min-width: 180px;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: transparent;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+}
+
+.skillsRow input::placeholder {
+  color: var(--text-secondary);
+}
+
+.skillsRow input:focus {
+  outline: none;
+}
+
+.addSkillBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #8a2be2, #4169e1);
+  color: white;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.2s;
+}
+
+.addSkillBtn:hover {
+  opacity: 0.9;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  background: rgba(138, 43, 226, 0.12);
+  color: #8a2be2;
+}
+
+.tagRemove {
+  cursor: pointer;
+  opacity: 0.8;
+  font-weight: bold;
+}
+
+.tagRemove:hover {
+  opacity: 1;
+}
+
+/* Resume upload zone */
+.uploadZone {
+  border: 2px dashed var(--card-border);
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  background: rgba(138, 43, 226, 0.03);
+  margin-bottom: 0.75rem;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.uploadZone.dragging {
+  border-color: #8a2be2;
+  background: rgba(138, 43, 226, 0.08);
+}
+
+.uploadIcon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 1rem;
+  color: var(--dashboard-subtitle);
+}
+
+.uploadZone p {
+  font-size: 0.9375rem;
+  color: var(--dashboard-subtitle);
+  margin-bottom: 0.25rem;
+}
+
+.uploadZone .hint {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.uploadZoneHasFile {
+  padding: 1.25rem 1rem;
+  text-align: center;
+}
+
+.resumeFileTile {
+  position: relative;
+  margin: 0 auto;
+  max-width: 260px;
+  padding: 1rem 0.75rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+.resumeFileRemove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  font-size: 1.35rem;
+  line-height: 1;
+  color: #fff;
+  background: rgba(220, 53, 69, 0.92);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    transform 0.15s;
+}
+
+.resumeFileRemove:hover {
+  background: #dc3545;
+  transform: scale(1.06);
+}
+
+.resumeFileBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0.35rem 0 0.65rem;
+}
+
+.pdfBadgeSvg {
+  width: 56px;
+  height: auto;
+  display: block;
+}
+
+.resumeFileBadgeDoc svg {
+  width: 52px;
+  height: 52px;
+  stroke: var(--dashboard-subtitle);
+}
+
+.uploadPreviewFileName {
+  font-size: 0.875rem;
+  color: var(--dashboard-subtitle);
+  margin: 0;
+  text-align: center;
+  word-break: break-word;
+}
+
+.uploadPreviewHint {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin: 0;
+  text-align: center;
+}
+
+.uploadBtnRow {
+  display: flex;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.uploadBtn {
+  padding: 0.5rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, #8a2be2, #4169e1);
+  color: white;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.uploadBtn:hover {
+  opacity: 0.9;
+}
+
+.uploadBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.extractBtn {
+  padding: 0.5rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid rgba(138, 43, 226, 0.45);
+  background: transparent;
+  color: var(--dashboard-title);
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    background 0.2s;
+}
+
+.extractBtn:hover:not(:disabled) {
+  border-color: #8a2be2;
+  background: rgba(138, 43, 226, 0.08);
+  color: #e8dcff;
+}
+
+.extractBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.resumeParsingHint {
+  font-size: 0.8125rem;
+  color: var(--dashboard-subtitle);
+  line-height: 1.45;
+  margin: 0.5rem 0 0;
+}
+
+/* Work experience */
+.expList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.expCard {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background: var(--card-bg);
+}
+
+.expCardTitle {
+  font-weight: 600;
+  color: var(--dashboard-title);
+  margin-bottom: 0.25rem;
+}
+
+.expCardMeta {
+  font-size: 0.875rem;
+  color: var(--dashboard-subtitle);
+}
+
+.addExpBtn {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: transparent;
+  color: var(--sidebar-text);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.addExpBtn:hover {
+  background: rgba(138, 43, 226, 0.08);
+}
+
+/* Case studies / projects – placeholder cards */
+.projectsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.projectCardPlaceholder {
+  aspect-ratio: 4/3;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(65, 105, 225, 0.15), rgba(138, 43, 226, 0.15));
+  border: 1px dashed var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.projectCardPlaceholder:hover {
+  border-color: #8a2be2;
+  background: linear-gradient(135deg, rgba(65, 105, 225, 0.2), rgba(138, 43, 226, 0.2));
+}
+
+.projectCardPlaceholder .plus {
+  font-size: 2rem;
+  color: var(--dashboard-subtitle);
+}
+
+.addProjectBtn {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: transparent;
+  color: var(--sidebar-text);
+  cursor: pointer;
+  margin-bottom: 1rem;
+  transition: background 0.2s;
+}
+
+.addProjectBtn:hover {
+  background: rgba(138, 43, 226, 0.08);
+}
+
+/* Portfolio links */
+.portfolioInputs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.portfolioInputs input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  background: var(--card-bg);
+  color: var(--text-primary);
+}
+
+.portfolioInputs input:focus {
+  outline: none;
+  border-color: #8a2be2;
+}
+
+/* ----- Right sidebar ----- */
+.sidebarCard {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.sidebarCardTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--dashboard-title);
+  margin-bottom: 1rem;
+}
+
+.sidebarCardTitle .icon {
+  width: 18px;
+  height: 18px;
+  color: var(--dashboard-subtitle);
+}
+
+.suggestionBox {
+  background: rgba(138, 43, 226, 0.06);
+  border: 1px solid rgba(138, 43, 226, 0.15);
+  border-radius: 8px;
+  padding: 0.875rem;
+  font-size: 0.875rem;
+  color: var(--dashboard-subtitle);
+  margin-bottom: 0.75rem;
+}
+
+.suggestionBox:last-child {
+  margin-bottom: 0;
+}
+
+.suggestionStatus {
+  font-size: 0.8125rem;
+  color: var(--dashboard-subtitle);
+  margin-bottom: 0.75rem;
+}
+
+.suggestionError {
+  font-size: 0.8125rem;
+  color: #f87171;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+
+.traitRow {
+  margin-bottom: 1rem;
+}
+
+.traitRow:last-child {
+  margin-bottom: 0;
+}
+
+.traitLabel {
+  font-size: 0.8125rem;
+  color: var(--dashboard-subtitle);
+  margin-bottom: 0.35rem;
+}
+
+.traitBar {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(138, 43, 226, 0.15);
+  overflow: hidden;
+}
+
+.traitFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #4169e1, #8a2be2);
+  transition: width 0.3s ease;
+}
+
+.traitFillIndeterminate {
+  height: 100%;
+  width: 38%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #4169e1, #8a2be2);
+  animation: traitBarPulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes traitBarPulse {
+  from {
+    transform: translateX(0);
+    opacity: 0.55;
+  }
+  to {
+    transform: translateX(170%);
+    opacity: 1;
+  }
+}
+
+.saveProfileBtn {
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #8a2be2, #4169e1);
+  color: white;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: opacity 0.2s;
+}
+
+.saveProfileBtn:hover {
+  opacity: 0.92;
+}
+
+.saveProfileBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Form inputs (name, etc.) – used in modal or inline */
+.formGroup {
+  margin-bottom: 1rem;
+}
+
+.formLabel {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--dashboard-title);
+}
+
+.formInput {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  background: var(--card-bg);
+  color: var(--text-primary);
+}
+
+.formInput:focus {
+  outline: none;
+  border-color: #8a2be2;
+}
+
+.formTextarea {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  background: var(--card-bg);
+  color: var(--text-primary);
+}
+
+.detailedCaseStudyForm {
+  margin-top: 1rem;
+  padding: 1.25rem;
+  background: rgba(138, 43, 226, 0.05);
+  border: 1px solid rgba(138, 43, 226, 0.15);
+  border-radius: 10px;
+}
+
+.caseStudiesList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.caseStudyCard {
+  padding: 1rem;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  background: var(--card-bg);
+  position: relative;
+}
+
+.caseStudyHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.caseStudyHeader strong {
+  font-size: 0.9375rem;
+  color: var(--dashboard-title);
+}
+
+.caseStudyDescription {
+  font-size: 0.875rem;
+  color: var(--dashboard-subtitle);
+  line-height: 1.5;
+}
+
+.addButton {
+  margin-top: 0.5rem;
+}
+
+.tagInput {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+}
+
+.tagInput input {
+  border: none;
+  outline: none;
+  flex: 1;
+  min-width: 120px;
+  font-size: 0.9375rem;
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.helpText {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin-top: 0.35rem;
+}
+
+.fileInput {
+  display: none;
+}
+
+.caseStudyText {
+  color: var(--dashboard-title);
+  font-size: 0.9375rem;
+}
+
+.caseStudyAchievements,
+.caseStudyDuration {
+  font-size: 0.8125rem;
+  color: var(--dashboard-subtitle);
+  margin-top: 0.35rem;
+}
+
+.caseStudyTech {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.techTag {
+  background: rgba(138, 43, 226, 0.12);
+  color: #8a2be2;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+}

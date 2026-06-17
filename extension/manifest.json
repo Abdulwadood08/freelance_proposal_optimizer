@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Freelance Proposal Optimizer",
+  "description": "Extract Upwork job details and generate AI-powered proposals.",
+  "version": "1.0.0",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": [
+    "https://www.upwork.com/*",
+    "https://upwork.com/*",
+    "http://localhost:3000/*",
+    "http://127.0.0.1:3000/*",
+    "http://localhost:8000/*",
+    "http://127.0.0.1:8000/*"
+  ],
+  "action": {
+    "default_title": "Proposal Optimizer",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.upwork.com/*",
+        "https://upwork.com/*",
+        "http://localhost:3000/*",
+        "http://127.0.0.1:3000/*"
+      ],
+      "js": ["content.js"],
+      "css": ["inpage.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

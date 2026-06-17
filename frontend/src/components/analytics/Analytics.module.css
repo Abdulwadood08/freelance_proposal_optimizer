@@ -1,0 +1,103 @@
+/* Analytics Page */
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  margin-bottom: 2rem;
+}
+
+.title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--dashboard-title);
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  font-size: 0.9375rem;
+  color: var(--dashboard-subtitle);
+}
+
+.loading {
+  text-align: center;
+  padding: 3rem;
+  color: var(--dashboard-subtitle);
+}
+
+/* Top Metrics Grid */
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+@media (max-width: 900px) {
+  .metricsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Breakdown Grid */
+.breakdownGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.chartCard {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.chartTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--dashboard-title);
+  margin: 0 0 1.25rem 0;
+}
+
+.suggestionsCard {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.activityList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.activityItem {
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.activityTitle {
+  margin: 0;
+  color: var(--dashboard-title);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.activityMeta {
+  margin: 0.25rem 0 0 0;
+  color: var(--dashboard-subtitle);
+  font-size: 0.8rem;
+}
+
+.emptyText {
+  margin: 0;
+  color: var(--dashboard-subtitle);
+  font-size: 0.9rem;
+}

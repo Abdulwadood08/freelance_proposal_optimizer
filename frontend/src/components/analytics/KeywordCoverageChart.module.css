@@ -1,0 +1,59 @@
+.container {
+  padding: 0.5rem 0;
+}
+
+.chart {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.barRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.keywordLabel {
+  width: 140px;
+  font-size: 0.875rem;
+  color: var(--dashboard-subtitle);
+  flex-shrink: 0;
+}
+
+.barContainer {
+  flex: 1;
+  position: relative;
+  height: 28px;
+  background: rgba(138, 43, 226, 0.1);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.bar {
+  height: 100%;
+  background: linear-gradient(90deg, #4169e1, #8a2be2);
+  border-radius: 6px;
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.barValue {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--dashboard-title);
+  z-index: 1;
+}
+
+.xAxis {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 0 0 160px;
+  font-size: 0.75rem;
+  color: var(--dashboard-subtitle);
+}

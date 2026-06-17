@@ -1,0 +1,58 @@
+/* AI Proposal Generator – two-panel layout, dark theme */
+.wrapper {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  margin-bottom: 1.5rem;
+}
+
+.title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--dashboard-title);
+  margin-bottom: 0.25rem;
+}
+
+.subtitle {
+  font-size: 0.9375rem;
+  color: var(--dashboard-subtitle);
+}
+
+.panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .panels {
+    grid-template-columns: 1fr;
+  }
+}
+
+.helpIcon {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--dashboard-subtitle);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  z-index: 100;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.helpIcon:hover {
+  color: var(--dashboard-title);
+  border-color: #8a2be2;
+}

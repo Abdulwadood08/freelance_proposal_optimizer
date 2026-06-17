@@ -1,0 +1,34 @@
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem 0;
+}
+
+.chart {
+  width: 100%;
+  max-width: 400px;
+}
+
+.gridCircle {
+  fill: none;
+  stroke: rgba(138, 43, 226, 0.15);
+  stroke-width: 1;
+}
+
+.gridLine {
+  stroke: rgba(138, 43, 226, 0.2);
+  stroke-width: 1;
+}
+
+.dataPolygon {
+  fill: rgba(138, 43, 226, 0.2);
+  stroke: #8a2be2;
+  stroke-width: 2;
+}
+
+.label {
+  font-size: 0.625rem;
+  fill: var(--dashboard-subtitle);
+  font-weight: 500;
+}

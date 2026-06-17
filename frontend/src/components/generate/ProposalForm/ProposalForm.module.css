@@ -1,0 +1,138 @@
+/* Left panel – Job Description */
+.panel {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+}
+
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.panelTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--dashboard-title);
+  margin: 0;
+}
+
+.charCount {
+  font-size: 0.8125rem;
+  color: var(--dashboard-subtitle);
+}
+
+.textarea {
+  width: 100%;
+  flex: 1;
+  min-height: 200px;
+  padding: 1rem;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  resize: vertical;
+  background: var(--app-bg);
+  color: var(--text-primary);
+  transition: border-color 0.2s;
+}
+
+.textarea::placeholder {
+  color: var(--text-secondary);
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: #8a2be2;
+  box-shadow: 0 0 0 2px rgba(138, 43, 226, 0.15);
+}
+
+.example {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--card-border);
+}
+
+.exampleLabel {
+  font-size: 0.8125rem;
+  color: var(--dashboard-subtitle);
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.exampleText {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.improveToggle {
+  margin-top: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--dashboard-subtitle);
+}
+
+.improveToggle input {
+  width: 14px;
+  height: 14px;
+}
+
+.generateBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin-top: 1.25rem;
+  padding: 0.875rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #8a2be2, #4169e1);
+  color: white;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.generateBtn:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.generateBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sparkle {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 0.35rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
