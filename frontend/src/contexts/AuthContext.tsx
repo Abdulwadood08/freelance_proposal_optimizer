@@ -11,7 +11,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { getFirebaseAuth } from '@/lib/firebase';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -47,7 +47,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
   const [isRemembered, setIsRemembered] = useState(false);
 
-  // Check if user should be remembered on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const remembered = localStorage.getItem(REMEMBER_ME_KEY) === 'true';
@@ -56,7 +55,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   async function signup(email: string, password: string): Promise<void> {
-    await createUserWithEmailAndPassword(auth, email, password);
+    await createUserWithEmailAndPassword(getFirebaseAuth(), email, password);
   }
 
   async function login(
@@ -72,7 +71,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.removeItem(REMEMBERED_EMAIL_KEY);
     }
     setIsRemembered(rememberMe);
-    await signInWithEmailAndPassword(auth, email, password);
+    await signInWithEmailAndPassword(getFirebaseAuth(), email, password);
   }
 
   async function loginWithGoogle(rememberMe: boolean = false): Promise<void> {
@@ -83,7 +82,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.removeItem(REMEMBER_ME_KEY);
     }
     setIsRemembered(rememberMe);
-    await signInWithPopup(auth, provider);
+    await signInWithPopup(getFirebaseAuth(), provider);
   }
 
   function logout() {
@@ -94,38 +93,47 @@ export function AuthProvider({ children }: AuthProviderProps) {
       sessionStorage.removeItem(EXTENSION_TOKEN_KEY);
     }
     setIsRemembered(false);
-    return signOut(auth);
+    return signOut(getFirebaseAuth());
   }
 
   function resetPassword(email: string) {
-    return sendPasswordResetEmail(auth, email);
+    return sendPasswordResetEmail(getFirebaseAuth(), email);
   }
 
   useEffect(() => {
-    const unsubscribe = onIdTokenChanged(auth, async (user) => {
-      setCurrentUser(user);
+    let unsubscribe: (() => void) | undefined;
 
-      // Keep a dedicated token key for the browser extension.
-      if (typeof window !== 'undefined') {
-        if (user) {
-          try {
-            const token = await user.getIdToken();
-            localStorage.setItem(EXTENSION_TOKEN_KEY, token);
-            sessionStorage.setItem(EXTENSION_TOKEN_KEY, token);
-          } catch {
+    try {
+      const auth = getFirebaseAuth();
+      unsubscribe = onIdTokenChanged(auth, async (user) => {
+        setCurrentUser(user);
+
+        if (typeof window !== 'undefined') {
+          if (user) {
+            try {
+              const token = await user.getIdToken();
+              localStorage.setItem(EXTENSION_TOKEN_KEY, token);
+              sessionStorage.setItem(EXTENSION_TOKEN_KEY, token);
+            } catch {
+              localStorage.removeItem(EXTENSION_TOKEN_KEY);
+              sessionStorage.removeItem(EXTENSION_TOKEN_KEY);
+            }
+          } else {
             localStorage.removeItem(EXTENSION_TOKEN_KEY);
             sessionStorage.removeItem(EXTENSION_TOKEN_KEY);
           }
-        } else {
-          localStorage.removeItem(EXTENSION_TOKEN_KEY);
-          sessionStorage.removeItem(EXTENSION_TOKEN_KEY);
         }
-      }
 
+        setLoading(false);
+      });
+    } catch (error) {
+      console.error('Firebase auth listener failed:', error);
       setLoading(false);
-    });
+    }
 
-    return unsubscribe;
+    return () => {
+      unsubscribe?.();
+    };
   }, []);
 
   const value: AuthContextType = {
@@ -141,5 +149,3 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
 }
-
-
