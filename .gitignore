@@ -134,3 +134,19 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+env/
+
+# Firebase / service account secrets (never commit)
+*firebase-adminsdk*.json
+firebase-service-account.json
+freelance-proposal-*.json
